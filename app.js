@@ -145,6 +145,16 @@ async function logout() {
   }
 }
 
+function openLoginModal() {
+  const modal = document.getElementById('login-modal');
+  if (modal) modal.classList.add('active');
+}
+
+function closeLoginModal() {
+  const modal = document.getElementById('login-modal');
+  if (modal) modal.classList.remove('active');
+}
+
 // ==========================================
 // FASE 2: PUBLIC SITE CONTENT LOADER (INDEX)
 // ==========================================
