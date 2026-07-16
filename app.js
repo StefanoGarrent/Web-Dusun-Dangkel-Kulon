@@ -7,12 +7,12 @@
 let SUPABASE_URL = localStorage.getItem('SB_URL') || 'https://gzczvdorglrgtwpxghrc.supabase.co';
 let SUPABASE_KEY = localStorage.getItem('SB_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6Y3p2ZG9yZ2xyZ3R3cHhnaHJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMDE2NTgsImV4cCI6MjA5OTc3NzY1OH0.wsOR1HbijQ8zoufr6HaRMAgrccaVQdnue3NtwBqYnkQ';
 
-let supabase = null;
+let sb = null;
 
 // Inisialisasi Supabase Client jika kredensial tersedia
 if (SUPABASE_URL && SUPABASE_KEY) {
   try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
   } catch (error) {
     console.error('Gagal menginisialisasi Supabase Client:', error);
   }
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupConfigPanel();
 
   // Inisialisasi Supabase & Cek Status Login
-  if (supabase) {
+  if (sb) {
     await checkAuth();
   } else {
     showConfigBanner();
@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Deteksi Halaman Aktif & Jalankan Inisialisasi Spesifik Halaman
   const path = window.location.pathname;
   if (path.includes('dashboard.html')) {
-    if (supabase) {
+    if (sb) {
       await initDashboard();
     } else {
       window.location.href = 'index.html';
@@ -60,14 +60,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function checkAuth() {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const { data: { session }, error } = await sb.auth.getSession();
     if (error) throw error;
 
     if (session) {
       currentUser = session.user;
 
       // Ambil data profil tambahan dari public.profiles
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await sb
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
@@ -110,7 +110,7 @@ function updateUIForLoggedInUser() {
 
 async function loginWithGoogle() {
   console.log('loginWithGoogle() dipanggil');
-  if (!supabase) {
+  if (!sb) {
     console.error('Supabase client is null atau belum diinisialisasi');
     showToast('Harap konfigurasikan API Supabase terlebih dahulu di bagian bawah halaman!', 'error');
     return;
@@ -119,7 +119,7 @@ async function loginWithGoogle() {
   // URL tujuan setelah login berhasil dialihkan
   const redirectUrl = window.location.origin + window.location.pathname.replace('index.html', '').replace('dashboard.html', '') + 'dashboard.html';
 
-  const { error } = await supabase.auth.signInWithOAuth({
+  const { error } = await sb.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: redirectUrl
@@ -132,8 +132,8 @@ async function loginWithGoogle() {
 }
 
 async function logout() {
-  if (!supabase) return;
-  const { error } = await supabase.auth.signOut();
+  if (!sb) return;
+  const { error } = await sb.auth.signOut();
   if (error) {
     showToast('Gagal logout: ' + error.message, 'error');
   } else {
@@ -154,7 +154,7 @@ function initPublicPage() {
   initMap();
 
   // Load Berita & UMKM
-  if (supabase) {
+  if (sb) {
     loadPublicNews();
     loadPublicUMKM();
   } else {
@@ -201,7 +201,7 @@ async function loadPublicNews() {
   container.innerHTML = '<div class="text-center" style="grid-column: 1/-1;"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i><p>Memuat Berita...</p></div>';
 
   try {
-    const { data: newsList, error } = await supabase
+    const { data: newsList, error } = await sb
       .from('news')
       .select(`
         *,
@@ -317,7 +317,7 @@ async function loadPublicUMKM() {
   container.innerHTML = '<div class="text-center" style="grid-column: 1/-1;"><i class="fas fa-spinner fa-spin fa-2x text-primary"></i><p>Memuat UMKM...</p></div>';
 
   try {
-    const { data: umkmList, error } = await supabase
+    const { data: umkmList, error } = await sb
       .from('umkm')
       .select('*')
       .order('name', { ascending: true });
@@ -516,7 +516,7 @@ function setupContactForm() {
 
 async function initDashboard() {
   // Lindungi Halaman: Pastikan user login
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { session } } = await sb.auth.getSession();
   if (!session) {
     window.location.href = 'index.html';
     return;
@@ -525,7 +525,7 @@ async function initDashboard() {
   currentUser = session.user;
 
   // Ambil profil
-  const { data: profile, error } = await supabase
+  const { data: profile, error } = await sb
     .from('profiles')
     .select('*')
     .eq('id', currentUser.id)
@@ -953,11 +953,11 @@ function triggerDashboardMapInit() {
 // LOAD DATA DASHBOARD
 async function loadDashboardStats() {
   try {
-    const { count: newsCount } = await supabase
+    const { count: newsCount } = await sb
       .from('news')
       .select('*', { count: 'exact', head: true });
 
-    const { count: umkmCount } = await supabase
+    const { count: umkmCount } = await sb
       .from('umkm')
       .select('*', { count: 'exact', head: true });
 
@@ -973,7 +973,7 @@ async function loadDashboardNews() {
   if (!tbody) return;
 
   try {
-    const { data: newsList, error } = await supabase
+    const { data: newsList, error } = await sb
       .from('news')
       .select('*')
       .order('created_at', { ascending: false });
@@ -1014,7 +1014,7 @@ async function loadDashboardUMKM() {
   if (!tbody) return;
 
   try {
-    const { data: umkmList, error } = await supabase
+    const { data: umkmList, error } = await sb
       .from('umkm')
       .select('*')
       .order('name', { ascending: true });
@@ -1057,7 +1057,7 @@ async function loadDashboardUsers() {
 
   try {
     // Ambil data profil dari database (kecuali akun super_admin agar tidak bisa diubah statusnya sendiri)
-    const { data: users, error } = await supabase
+    const { data: users, error } = await sb
       .from('profiles')
       .select('*')
       .neq('role', 'super_admin')
@@ -1104,7 +1104,7 @@ async function loadDashboardUsers() {
 // ACTION PERSATUAN ADMIN (SUPER ADMIN ONLY)
 async function verifyUser(userId, status) {
   try {
-    const { error } = await supabase
+    const { error } = await sb
       .from('profiles')
       .update({ status: status, updated_at: new Date().toISOString() })
       .eq('id', userId);
@@ -1122,7 +1122,7 @@ async function promoteUser(userId) {
   if (!confirm('Apakah Anda yakin ingin mempromosikan pengguna ini menjadi Super Admin (memiliki akses penuh untuk menyetujui admin lain)? HAK AKSES INI TIDAK DAPAT DICABUT SENDIRI.')) return;
 
   try {
-    const { error } = await supabase
+    const { error } = await sb
       .from('profiles')
       .update({ role: 'super_admin', updated_at: new Date().toISOString() })
       .eq('id', userId);
@@ -1167,14 +1167,14 @@ async function saveNews(e) {
     let result;
     if (id) {
       // Update
-      result = await supabase
+      result = await sb
         .from('news')
         .update(payload)
         .eq('id', id);
     } else {
       // Insert
       payload.created_at = new Date().toISOString();
-      result = await supabase
+      result = await sb
         .from('news')
         .insert([payload]);
     }
@@ -1204,7 +1204,7 @@ async function deleteNews(id) {
   if (!confirm('Apakah Anda yakin ingin menghapus berita ini secara permanen?')) return;
 
   try {
-    const { error } = await supabase
+    const { error } = await sb
       .from('news')
       .delete()
       .eq('id', id);
@@ -1265,13 +1265,13 @@ async function saveUmkm(e) {
     let result;
     if (id) {
       // Update
-      result = await supabase
+      result = await sb
         .from('umkm')
         .update(payload)
         .eq('id', id);
     } else {
       // Insert
-      result = await supabase
+      result = await sb
         .from('umkm')
         .insert([payload]);
     }
@@ -1308,7 +1308,7 @@ async function deleteUmkm(id) {
   if (!confirm('Apakah Anda yakin ingin menghapus UMKM ini dari direktori?')) return;
 
   try {
-    const { error } = await supabase
+    const { error } = await sb
       .from('umkm')
       .delete()
       .eq('id', id);
