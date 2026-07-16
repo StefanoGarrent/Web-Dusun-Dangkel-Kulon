@@ -109,7 +109,9 @@ function updateUIForLoggedInUser() {
 }
 
 async function loginWithGoogle() {
+  console.log('loginWithGoogle() dipanggil');
   if (!supabase) {
+    console.error('Supabase client is null atau belum diinisialisasi');
     showToast('Harap konfigurasikan API Supabase terlebih dahulu di bagian bawah halaman!', 'error');
     return;
   }
