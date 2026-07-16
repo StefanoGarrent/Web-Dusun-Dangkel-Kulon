@@ -4,8 +4,8 @@
  */
 
 // 1. SUPABASE CONFIGURATION (FALLBACK KE LOCAL STORAGE UNTUK MEMUDAHKAN DEPLOYMENT/PENGUJIAN LOKAL)
-let SUPABASE_URL = localStorage.getItem('SB_URL') || '';
-let SUPABASE_KEY = localStorage.getItem('SB_KEY') || '';
+let SUPABASE_URL = localStorage.getItem('SB_URL') || 'https://gzczvdorglrgtwpxghrc.supabase.co';
+let SUPABASE_KEY = localStorage.getItem('SB_KEY') || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd6Y3p2ZG9yZ2xyZ3R3cHhnaHJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMDE2NTgsImV4cCI6MjA5OTc3NzY1OH0.wsOR1HbijQ8zoufr6HaRMAgrccaVQdnue3NtwBqYnkQ';
 
 let supabase = null;
 
@@ -65,14 +65,14 @@ async function checkAuth() {
 
     if (session) {
       currentUser = session.user;
-      
+
       // Ambil data profil tambahan dari public.profiles
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .single();
-      
+
       if (profileError) {
         console.warn('Profil belum terbuat otomatis:', profileError);
       } else {
@@ -113,10 +113,10 @@ async function loginWithGoogle() {
     showToast('Harap konfigurasikan API Supabase terlebih dahulu di bagian bawah halaman!', 'error');
     return;
   }
-  
+
   // URL tujuan setelah login berhasil dialihkan
   const redirectUrl = window.location.origin + window.location.pathname.replace('index.html', '').replace('dashboard.html', '') + 'dashboard.html';
-  
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
@@ -228,7 +228,7 @@ async function loadPublicNews() {
 function createNewsCard(news) {
   const card = document.createElement('div');
   card.className = 'news-card';
-  
+
   const formattedDate = new Date(news.created_at).toLocaleDateString('id-ID', {
     day: 'numeric',
     month: 'long',
@@ -344,7 +344,7 @@ function renderUMKM(list) {
   list.forEach(umkm => {
     const card = document.createElement('div');
     card.className = 'umkm-card';
-    
+
     const waLink = `https://wa.me/${formatPhoneNumber(umkm.whatsapp_number)}?text=Halo%20${encodeURIComponent(umkm.name)},%20saya%20tertarik%20dengan%20produk%20Anda%20dari%20web%20Dusun.`;
     const image = umkm.image_url || 'https://images.unsplash.com/photo-1473187983305-f615310e7daa?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
 
@@ -413,9 +413,9 @@ function filterUMKM(category) {
 
   const filtered = dataList.filter(item => {
     const matchesCategory = category === 'semua' || item.category.toLowerCase() === category.toLowerCase();
-    const matchesSearch = item.name.toLowerCase().includes(searchVal) || 
-                          item.description.toLowerCase().includes(searchVal) || 
-                          item.owner.toLowerCase().includes(searchVal);
+    const matchesSearch = item.name.toLowerCase().includes(searchVal) ||
+      item.description.toLowerCase().includes(searchVal) ||
+      item.owner.toLowerCase().includes(searchVal);
     return matchesCategory && matchesSearch;
   });
 
@@ -424,7 +424,7 @@ function filterUMKM(category) {
 
 function searchUMKM(val) {
   const query = val.toLowerCase();
-  
+
   // Deteksi kategori aktif
   const activeBtn = document.querySelector('.filter-btn.active');
   let activeCategory = 'semua';
@@ -437,9 +437,9 @@ function searchUMKM(val) {
   const dataList = window.allUmkmList || getMockUMKMData();
   const filtered = dataList.filter(item => {
     const matchesCategory = activeCategory === 'semua' || item.category.toLowerCase() === activeCategory.toLowerCase();
-    const matchesSearch = item.name.toLowerCase().includes(query) || 
-                          item.description.toLowerCase().includes(query) || 
-                          item.owner.toLowerCase().includes(query);
+    const matchesSearch = item.name.toLowerCase().includes(query) ||
+      item.description.toLowerCase().includes(query) ||
+      item.owner.toLowerCase().includes(query);
     return matchesCategory && matchesSearch;
   });
 
@@ -521,7 +521,7 @@ async function initDashboard() {
   }
 
   currentUser = session.user;
-  
+
   // Ambil profil
   const { data: profile, error } = await supabase
     .from('profiles')
@@ -917,10 +917,10 @@ function triggerDashboardMapInit() {
     if (dashboardMap) {
       dashboardMap.remove();
     }
-    
+
     const latField = document.getElementById('umkm-lat-field');
     const lngField = document.getElementById('umkm-lng-field');
-    
+
     let center = defaultCoordinates;
     if (latField.value && lngField.value) {
       center = [parseFloat(latField.value), parseFloat(lngField.value)];
@@ -1072,8 +1072,8 @@ async function loadDashboardUsers() {
     users.forEach(user => {
       const tr = document.createElement('tr');
       const statusClass = `badge-${user.status}`;
-      const statusText = user.status === 'pending' ? 'Menunggu ACC' : 
-                         user.status === 'approved' ? 'Disetujui' : 'Ditolak';
+      const statusText = user.status === 'pending' ? 'Menunggu ACC' :
+        user.status === 'approved' ? 'Disetujui' : 'Ditolak';
 
       tr.innerHTML = `
         <td>
@@ -1088,6 +1088,7 @@ async function loadDashboardUsers() {
           <div class="actions-cell">
             ${user.status !== 'approved' ? `<button class="btn-action btn-approve" onclick="verifyUser('${user.id}', 'approved')"><i class="fas fa-check"></i> ACC</button>` : ''}
             ${user.status !== 'rejected' ? `<button class="btn-action btn-reject" onclick="verifyUser('${user.id}', 'rejected')"><i class="fas fa-times"></i> Tolak</button>` : ''}
+            ${user.status === 'approved' && user.role !== 'super_admin' ? `<button class="btn-action" style="background-color:#fff3cd; color:#856404;" onclick="promoteUser('${user.id}')"><i class="fas fa-user-shield"></i> Jadikan Super Admin</button>` : ''}
           </div>
         </td>
       `;
@@ -1112,6 +1113,24 @@ async function verifyUser(userId, status) {
     loadDashboardUsers();
   } catch (err) {
     showToast('Gagal memverifikasi pengguna: ' + err.message, 'error');
+  }
+}
+
+async function promoteUser(userId) {
+  if (!confirm('Apakah Anda yakin ingin mempromosikan pengguna ini menjadi Super Admin (memiliki akses penuh untuk menyetujui admin lain)? HAK AKSES INI TIDAK DAPAT DICABUT SENDIRI.')) return;
+
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ role: 'super_admin', updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    showToast('Pengguna berhasil dipromosikan menjadi Super Admin!', 'success');
+    loadDashboardUsers();
+  } catch (err) {
+    showToast('Gagal mempromosikan pengguna: ' + err.message, 'error');
   }
 }
 
@@ -1310,7 +1329,7 @@ async function deleteUmkm(id) {
 function setupMobileNav() {
   const burger = document.querySelector('.burger');
   const nav = document.querySelector('.nav-links');
-  
+
   if (burger && nav) {
     burger.addEventListener('click', () => {
       nav.classList.toggle('active');
@@ -1338,7 +1357,7 @@ function showToast(message, type = 'info') {
 
   const toast = document.createElement('div');
   toast.className = `toast ${type}`;
-  
+
   let icon = 'fa-info-circle';
   if (type === 'success') icon = 'fa-check-circle';
   if (type === 'error') icon = 'fa-exclamation-circle';
@@ -1363,7 +1382,7 @@ function showToast(message, type = 'info') {
 
 function escapeHTML(str) {
   if (!str) return '';
-  return str.replace(/[&<>'"]/g, 
+  return str.replace(/[&<>'"]/g,
     tag => ({
       '&': '&amp;',
       '<': '&lt;',
@@ -1460,7 +1479,7 @@ function getMockUMKMData() {
 function loadMockNews() {
   const container = document.getElementById('news-container');
   if (!container) return;
-  
+
   const mockNews = getMockNewsData();
   container.innerHTML = '';
   mockNews.forEach(news => {
@@ -1471,7 +1490,7 @@ function loadMockNews() {
 function loadMockUMKM() {
   const container = document.getElementById('umkm-container');
   if (!container) return;
-  
+
   const mockUmkm = getMockUMKMData();
   window.allUmkmList = mockUmkm;
   renderUMKM(mockUmkm);
@@ -1536,7 +1555,7 @@ function clearSupabaseConfig() {
   localStorage.removeItem('SB_URL');
   localStorage.removeItem('SB_KEY');
   showToast('Konfigurasi dihapus. Website kembali menggunakan data uji (mock)!', 'info');
-  
+
   setTimeout(() => {
     window.location.reload();
   }, 1000);
@@ -1569,7 +1588,7 @@ function showConfigBanner() {
   banner.innerHTML = `
     <span><i class="fas fa-info-circle"></i> Mode Demo: Database belum terhubung. Gunakan form konfigurasi di bagian bawah halaman untuk menghubungkan Supabase Anda.</span>
   `;
-  
+
   document.body.appendChild(banner);
   document.body.style.paddingTop = '32px';
 }

@@ -75,10 +75,10 @@ BEGIN
     new.email,
     new.raw_user_meta_data->>'full_name',
     new.raw_user_meta_data->>'avatar_url',
-    -- Email Kepala Dusun akan otomatis menjadi 'super_admin' dan 'approved'
-    -- GANTI 'kepaladusun@gmail.com' dengan email asli Google milik Kepala Dusun Anda
-    CASE WHEN new.email = 'kepaladusun@gmail.com' THEN 'super_admin' ELSE 'admin' END,
-    CASE WHEN new.email = 'kepaladusun@gmail.com' THEN 'approved' ELSE 'pending' END
+    -- Hanya email Developer yang otomatis menjadi 'super_admin' dan 'approved' saat pertama kali login.
+    -- Kepala Dusun dan admin lainnya bisa dipromosikan ke 'super_admin' melalui dashboard oleh akun super_admin ini.
+    CASE WHEN new.email = 'stefano.garrentk@gmail.com' THEN 'super_admin' ELSE 'admin' END,
+    CASE WHEN new.email = 'stefano.garrentk@gmail.com' THEN 'approved' ELSE 'pending' END
   );
   RETURN new;
 END;
