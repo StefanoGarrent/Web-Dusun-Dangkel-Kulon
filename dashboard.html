@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Pengelolaan Web Dusun Dangkel Kulon</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/8030/8030147.png">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Leaflet Map CSS (untuk picker koordinat UMKM) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Container Utama Aplikasi Dashboard -->
+  <!-- Konten dalam div ini akan dirender secara dinamis oleh JavaScript di app.js -->
+  <div id="dashboard-app">
+    <div class="auth-wrapper">
+      <div class="auth-card">
+        <div class="logo">
+          <img src="https://cdn-icons-png.flaticon.com/512/8030/8030147.png" alt="Logo" style="height: 45px;">
+          <span>DANGKEL KULON</span>
+        </div>
+        <i class="fas fa-spinner fa-spin fa-2x text-primary" style="margin-bottom: 20px;"></i>
+        <h3>Memeriksa Status Login...</h3>
+        <p>Harap tunggu sementara sistem memverifikasi kredensial Google Auth Anda.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       EXTERNAL SCRIPTS
+       ========================================== -->
+  
+  <!-- Supabase Client JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Main Script -->
+  <script src="app.js"></script>
+
+</body>
+</html>

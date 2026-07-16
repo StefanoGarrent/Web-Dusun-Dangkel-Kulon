@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website Resmi Dusun Dangkel Kulon</title>
+  <meta name="description" content="Portal informasi, kegiatan pemuda karang taruna, direktori UMKM, dan peta interaktif Dusun Dangkel Kulon.">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="https://cdn-icons-png.flaticon.com/512/8030/8030147.png">
+
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Leaflet Map CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- 1. HEADER / NAVIGATION -->
+  <header class="header">
+    <div class="container nav-container">
+      <a href="#" class="logo">
+        <img src="https://cdn-icons-png.flaticon.com/512/8030/8030147.png" alt="Logo">
+        <span>DANGKEL KULON</span>
+      </a>
+      
+      <nav>
+        <ul class="nav-links">
+          <li><a href="#beranda" class="active">Beranda</a></li>
+          <li><a href="#profil">Profil Dusun</a></li>
+          <li><a href="#kegiatan">Kegiatan Pemuda</a></li>
+          <li><a href="#umkm">UMKM Desa</a></li>
+          <li><a href="#peta">Peta Dusun</a></li>
+          <li><a href="#kontak">Kontak</a></li>
+        </ul>
+      </nav>
+      
+      <div class="nav-actions">
+        <!-- Tombol login akan berubah dinamis jika user terdeteksi login di app.js -->
+        <button onclick="loginWithGoogle()" class="btn btn-primary" id="login-nav-btn">
+          <i class="fab fa-google"></i> Login Admin
+        </button>
+        <button class="burger" aria-label="Toggle navigation">
+          <span class="line1"></span>
+          <span class="line2"></span>
+          <span class="line3"></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. HERO SECTION -->
+  <section id="beranda" class="hero">
+    <div class="container hero-grid">
+      <div class="hero-content">
+        <span class="hero-tag"><i class="fas fa-seedling"></i> Harmoni & Kemajuan</span>
+        <h1>Selamat Datang di Dusun Dangkel Kulon</h1>
+        <p>Pusat informasi resmi kemasyarakatan, kreativitas pemuda karang taruna, pemberdayaan ekonomi kreatif UMKM, dan pemetaan wilayah digital Dusun Dangkel Kulon.</p>
+        <div class="hero-buttons">
+          <a href="#profil" class="btn btn-primary">Pelajari Profil <i class="fas fa-chevron-right"></i></a>
+          <a href="#umkm" class="btn btn-outline">Jelajahi UMKM</a>
+        </div>
+      </div>
+      <div class="hero-media">
+        <div class="hero-image-wrapper">
+          <!-- Gambar pemandangan desa premium -->
+          <img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" alt="Pemandangan Dusun Dangkel Kulon" style="max-width: 100%; width: 500px; height: 350px; object-fit: cover;">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. PROFIL DUSUN & STATISTIK -->
+  <section id="profil" class="section">
+    <div class="container">
+      <div class="section-header text-center">
+        <h2>Profil Dusun</h2>
+        <p class="text-muted">Mengenal lebih dekat sejarah, visi misi, serta struktur sosial kependudukan di wilayah Dusun Dangkel Kulon.</p>
+      </div>
+      
+      <div class="profile-grid">
+        <div class="profile-info">
+          <h3>Sejarah & Visi Misi</h3>
+          <p>Dusun Dangkel Kulon merupakan salah satu sentra pemukiman asri yang memadukan keindahan alam agraris dengan semangat gotong royong warganya yang tinggi. Berkomitmen untuk menciptakan lingkungan yang harmonis, agamis, mandiri, dan berdaya saing tinggi.</p>
+          
+          <div style="margin-bottom: 20px; border-left: 4px solid var(--primary); padding-left: 15px;">
+            <h4 style="color:var(--primary); margin-bottom:5px;">Visi Dusun</h4>
+            <p style="font-style: italic; margin-bottom:0;">"Mewujudkan Dusun Dangkel Kulon yang tangguh, sejahtera, dan inovatif berbasis kemitraan aktif antara perangkat dan generasi muda."</p>
+          </div>
+          
+          <div class="stats-container">
+            <div class="stat-card">
+              <div class="stat-icon"><i class="fas fa-users"></i></div>
+              <h4 id="stat-populasi">450+</h4>
+              <p>Total Jiwa</p>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon"><i class="fas fa-home"></i></div>
+              <h4 id="stat-kk">120+</h4>
+              <p>Kepala Keluarga</p>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Visualisasi Grafik Penduduk -->
+        <div class="chart-wrapper">
+          <canvas id="statsChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. KEGIATAN PEMUDA (NEWS) -->
+  <section id="kegiatan" class="section section-bg">
+    <div class="container">
+      <div class="section-header text-center">
+        <h2>Kegiatan Pemuda</h2>
+        <p class="text-muted">Aktivitas positif karang taruna, program sosial, olahraga, dan berita terkini dari pemuda pemudi Dusun Dangkel Kulon.</p>
+      </div>
+      
+      <!-- Container Berita Dinamis -->
+      <div class="news-grid" id="news-container">
+        <!-- Akan dirender dinamis via app.js -->
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. DIREKTORI UMKM -->
+  <section id="umkm" class="section">
+    <div class="container">
+      <div class="section-header text-center">
+        <h2>Direktori UMKM Desa</h2>
+        <p class="text-muted">Dukung ekonomi lokal dengan berbelanja langsung dari para pengusaha dan pengrajin lokal Dusun Dangkel Kulon.</p>
+      </div>
+      
+      <!-- Pencarian dan Filter -->
+      <div class="umkm-search">
+        <input type="text" id="search-umkm" placeholder="Cari nama UMKM atau produk..." oninput="searchUMKM(this.value)">
+        <i class="fas fa-search"></i>
+      </div>
+      
+      <div class="umkm-filters">
+        <button class="filter-btn active" onclick="filterUMKM('semua')">Semua Kategori</button>
+        <button class="filter-btn" onclick="filterUMKM('Makanan & Minuman')">Makanan & Minuman</button>
+        <button class="filter-btn" onclick="filterUMKM('Kerajinan')">Kerajinan</button>
+        <button class="filter-btn" onclick="filterUMKM('Pertanian')">Pertanian</button>
+        <button class="filter-btn" onclick="filterUMKM('Jasa & Konveksi')">Jasa & Konveksi</button>
+        <button class="filter-btn" onclick="filterUMKM('Lainnya')">Lainnya</button>
+      </div>
+
+      <!-- Container UMKM Dinamis -->
+      <div class="umkm-grid" id="umkm-container">
+        <!-- Akan dirender dinamis via app.js -->
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. PETA INTERAKTIF DUSUN -->
+  <section id="peta" class="section section-bg map-section">
+    <div class="container">
+      <div class="section-header text-center">
+        <h2>Peta Wilayah Dusun</h2>
+        <p class="text-muted">Pemetaan interaktif wilayah Dusun Dangkel Kulon beserta lokasi penting, fasilitas umum, dan sebaran UMKM.</p>
+      </div>
+      
+      <div class="map-card">
+        <!-- Tempat Peta Merender -->
+        <div id="map"></div>
+        <div class="map-legend">
+          <div class="legend-item">
+            <div class="legend-icon" style="background-color: var(--primary);"></div>
+            <span>Balai / Kantor Dusun</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-icon" style="background-color: var(--secondary);"></div>
+            <span>Usaha UMKM</span>
+          </div>
+          <div class="legend-item">
+            <div class="legend-icon" style="background-color: var(--info);"></div>
+            <span>Fasilitas Umum</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. KONTAK & MASUKAN -->
+  <section id="kontak" class="section">
+    <div class="container" style="max-width: 800px;">
+      <div class="section-header text-center">
+        <h2>Kontak Dusun</h2>
+        <p class="text-muted">Hubungi perangkat dusun atau ajukan pertanyaan dan masukan konstruktif untuk kemajuan wilayah kita.</p>
+      </div>
+      
+      <form id="contact-form" style="background-color:var(--white); padding:40px; border-radius:var(--border-radius-lg); box-shadow:var(--shadow-md); border:1px solid var(--gray-200);">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="contact-name">Nama Lengkap</label>
+            <input type="text" id="contact-name" class="form-control" placeholder="Masukkan nama Anda" required>
+          </div>
+          <div class="form-group">
+            <label for="contact-email">Email / Telepon</label>
+            <input type="text" id="contact-email" class="form-control" placeholder="contoh@gmail.com / 081..." required>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="contact-subject">Subjek</label>
+          <input type="text" id="contact-subject" class="form-control" placeholder="Hal yang ingin disampaikan" required>
+        </div>
+        <div class="form-group">
+          <label for="contact-message">Isi Pesan</label>
+          <textarea id="contact-message" class="form-control" placeholder="Tuliskan pesan Anda secara jelas di sini..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; margin-top:10px;">Kirim Pesan <i class="fas fa-paper-plane"></i></button>
+      </form>
+    </div>
+  </section>
+
+  <!-- 8. FOOTER -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div class="footer-info">
+        <a href="#" class="logo footer-logo">
+          <img src="https://cdn-icons-png.flaticon.com/512/8030/8030147.png" alt="Logo">
+          <span>DANGKEL KULON</span>
+        </a>
+        <p>Portal web pemetaan wilayah digital dan koordinasi warga masyarakat Dusun Dangkel Kulon. Bersatu, berkarya, membangun desa lebih maju.</p>
+        <div class="footer-socials">
+          <a href="#" class="social-icon" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+          <a href="#" class="social-icon" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+          <a href="#" class="social-icon" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+        </div>
+      </div>
+      
+      <div class="footer-links">
+        <h4>Pintasan Link</h4>
+        <ul>
+          <li><a href="#beranda"><i class="fas fa-chevron-right" style="font-size:0.8rem; margin-right:8px;"></i> Beranda</a></li>
+          <li><a href="#profil"><i class="fas fa-chevron-right" style="font-size:0.8rem; margin-right:8px;"></i> Profil Dusun</a></li>
+          <li><a href="#kegiatan"><i class="fas fa-chevron-right" style="font-size:0.8rem; margin-right:8px;"></i> Kegiatan Pemuda</a></li>
+          <li><a href="#umkm"><i class="fas fa-chevron-right" style="font-size:0.8rem; margin-right:8px;"></i> UMKM Desa</a></li>
+          <li><a href="#peta"><i class="fas fa-chevron-right" style="font-size:0.8rem; margin-right:8px;"></i> Peta Dusun</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-contact">
+        <h4>Kontak Pelayanan</h4>
+        <ul>
+          <li>
+            <i class="fas fa-map-marker-alt"></i>
+            <span>Dusun Dangkel Kulon, Desa Grabag, Kec. Grabag, Kab. Magelang, Jawa Tengah.</span>
+          </li>
+          <li>
+            <i class="fas fa-envelope"></i>
+            <span>info@dangkelkulon.desa.id</span>
+          </li>
+          <li>
+            <i class="fas fa-phone-alt"></i>
+            <span>+62 812-3456-7890</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="footer-bottom">
+      <p>&copy; 2026 Pemerintah Dusun Dangkel Kulon. All Rights Reserved. Built with <i class="fas fa-heart text-danger"></i> & Supabase.</p>
+    </div>
+  </footer>
+
+  <!-- ==========================================
+       EXTERNAL SCRIPTS
+       ========================================== -->
+  
+  <!-- Supabase Client JS SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <!-- Leaflet Map JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  
+  <!-- Chart.js Library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Main Script -->
+  <script src="app.js"></script>
+
+</body>
+</html>
