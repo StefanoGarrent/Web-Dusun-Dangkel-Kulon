@@ -30,14 +30,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Mobile Nav Burger Menu
   setupMobileNav();
 
-  // Setup panel konfigurasi Supabase (hanya untuk pengujian lokal jika kredensial kosong)
-  setupConfigPanel();
-
   // Inisialisasi Supabase & Cek Status Login
   if (sb) {
     await checkAuth();
-  } else {
-    showConfigBanner();
   }
 
   // Deteksi Halaman Aktif & Jalankan Inisialisasi Spesifik Halaman
@@ -209,6 +204,22 @@ function switchLoginTab(tabId) {
     content.classList.remove('active');
   });
   document.getElementById(tabId).classList.add('active');
+}
+
+function togglePasswordVisibility(inputId) {
+  const input = document.getElementById(inputId);
+  const eyeIcon = document.getElementById(inputId + '-eye');
+  if (input && eyeIcon) {
+    if (input.type === 'password') {
+      input.type = 'text';
+      eyeIcon.classList.remove('fa-eye');
+      eyeIcon.classList.add('fa-eye-slash');
+    } else {
+      input.type = 'password';
+      eyeIcon.classList.remove('fa-eye-slash');
+      eyeIcon.classList.add('fa-eye');
+    }
+  }
 }
 
 async function loginWithPassword(e) {
@@ -1089,6 +1100,11 @@ function triggerDashboardMapInit() {
         pickerMarker = L.marker(e.latlng).addTo(dashboardMap);
       }
     });
+
+    // Paksa Leaflet menghitung ulang ukuran kontainer di dalam modal
+    setTimeout(() => {
+      dashboardMap.invalidateSize();
+    }, 100);
   }, 300);
 }
 
@@ -1233,6 +1249,7 @@ async function loadDashboardUsers() {
             ${user.status !== 'approved' ? `<button class="btn-action btn-approve" onclick="verifyUser('${user.id}', 'approved')"><i class="fas fa-check"></i> ACC</button>` : ''}
             ${user.status !== 'rejected' ? `<button class="btn-action btn-reject" onclick="verifyUser('${user.id}', 'rejected')"><i class="fas fa-times"></i> Tolak</button>` : ''}
             ${user.status === 'approved' && user.role !== 'super_admin' ? `<button class="btn-action" style="background-color:#fff3cd; color:#856404;" onclick="promoteUser('${user.id}')"><i class="fas fa-user-shield"></i> Jadikan Super Admin</button>` : ''}
+            <button class="btn-action btn-delete" onclick="deleteUser('${user.id}')"><i class="fas fa-trash-alt"></i> Hapus</button>
           </div>
         </td>
       `;
@@ -1275,6 +1292,24 @@ async function promoteUser(userId) {
     loadDashboardUsers();
   } catch (err) {
     showToast('Gagal mempromosikan pengguna: ' + err.message, 'error');
+  }
+}
+
+async function deleteUser(userId) {
+  if (!confirm('Apakah Anda yakin ingin menghapus akun admin ini secara permanen dari database? Pengguna tidak akan memiliki akses lagi.')) return;
+
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (error) throw error;
+
+    showToast('Akun berhasil dihapus.', 'success');
+    loadDashboardUsers();
+  } catch (err) {
+    showToast('Gagal menghapus akun: ' + err.message, 'error');
   }
 }
 
@@ -1641,98 +1676,4 @@ function loadMockUMKM() {
   addUMKMMarkers(mockUmkm);
 }
 
-// ==========================================
-// CONFIGURATION PANEL FOR OFFLINE / TESTING
-// ==========================================
-
-function setupConfigPanel() {
-  const footerElement = document.querySelector('footer');
-  if (!footerElement) return;
-
-  const panel = document.createElement('div');
-  panel.style.cssText = `
-    background-color: var(--gray-100);
-    border-top: 1px solid var(--gray-200);
-    padding: 30px 0;
-    text-align: center;
-    font-size: 0.9rem;
-    position: relative;
-    z-index: 50;
-  `;
-
-  panel.innerHTML = `
-    <div class="container" style="max-width: 600px;">
-      <h4 style="margin-bottom: 10px; color: var(--primary);"><i class="fas fa-database"></i> Panel Konfigurasi Database Lokal</h4>
-      <p class="text-muted" style="margin-bottom: 20px;">Masukkan detail API Supabase Anda untuk menghubungkan fitur Login Google dan Dashboard secara langsung.</p>
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        <input type="text" id="cfg-url" class="form-control" placeholder="Supabase Project URL" value="${SUPABASE_URL}">
-        <input type="password" id="cfg-key" class="form-control" placeholder="Supabase Anon Key" value="${SUPABASE_KEY}">
-        <button class="btn btn-primary" onclick="saveSupabaseConfig()" style="width: 100%;">Hubungkan Supabase</button>
-        ${SUPABASE_URL ? `<button class="btn btn-outline" onclick="clearSupabaseConfig()" style="width: 100%; margin-top:5px; border-color:var(--danger); color:var(--danger)">Putuskan Hubungan</button>` : ''}
-      </div>
-    </div>
-  `;
-
-  // Sisipkan sebelum footer
-  footerElement.parentNode.insertBefore(panel, footerElement);
-}
-
-function saveSupabaseConfig() {
-  const url = document.getElementById('cfg-url').value.trim();
-  const key = document.getElementById('cfg-key').value.trim();
-
-  if (!url || !key) {
-    showToast('Harap isi URL dan Anon Key Supabase!', 'warning');
-    return;
-  }
-
-  localStorage.setItem('SB_URL', url);
-  localStorage.setItem('SB_KEY', key);
-  showToast('Konfigurasi disimpan! Halaman akan dimuat ulang...', 'success');
-
-  setTimeout(() => {
-    window.location.reload();
-  }, 1000);
-}
-
-function clearSupabaseConfig() {
-  localStorage.removeItem('SB_URL');
-  localStorage.removeItem('SB_KEY');
-  showToast('Konfigurasi dihapus. Website kembali menggunakan data uji (mock)!', 'info');
-
-  setTimeout(() => {
-    window.location.reload();
-  }, 1000);
-}
-
-function showConfigBanner() {
-  const container = document.querySelector('.header .nav-container');
-  if (!container) return;
-
-  const banner = document.createElement('div');
-  banner.id = 'demo-banner';
-  banner.style.cssText = `
-    background-color: var(--warning);
-    color: var(--dark);
-    font-size: 0.8rem;
-    font-weight: 700;
-    padding: 6px 12px;
-    text-align: center;
-    width: 100%;
-    position: fixed;
-    top: var(--header-height);
-    left: 0;
-    z-index: 999;
-    box-shadow: var(--shadow-sm);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-  `;
-  banner.innerHTML = `
-    <span><i class="fas fa-info-circle"></i> Mode Demo: Database belum terhubung. Gunakan form konfigurasi di bagian bawah halaman untuk menghubungkan Supabase Anda.</span>
-  `;
-
-  document.body.appendChild(banner);
-  document.body.style.paddingTop = '32px';
-}
+// Akhir dari file app.js

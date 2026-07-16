@@ -296,7 +296,12 @@
           </div>
           <div class="form-group">
             <label for="login-password">Password Website</label>
-            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+            <div class="password-input-container" style="position: relative;">
+              <input type="password" id="login-password" class="form-control" style="padding-right: 40px;" placeholder="••••••••" required>
+              <button type="button" onclick="togglePasswordVisibility('login-password')" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--gray-600); cursor: pointer; padding: 4px;">
+                <i class="fas fa-eye" id="login-password-eye"></i>
+              </button>
+            </div>
           </div>
           <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
             Masuk <i class="fas fa-sign-in-alt"></i>
@@ -323,11 +328,21 @@
           </div>
           <div class="form-group">
             <label for="register-password">Password Website</label>
-            <input type="password" id="register-password" class="form-control" placeholder="Minimal 6 karakter" required minlength="6">
+            <div class="password-input-container" style="position: relative;">
+              <input type="password" id="register-password" class="form-control" style="padding-right: 40px;" placeholder="Minimal 6 karakter" required minlength="6">
+              <button type="button" onclick="togglePasswordVisibility('register-password')" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--gray-600); cursor: pointer; padding: 4px;">
+                <i class="fas fa-eye" id="register-password-eye"></i>
+              </button>
+            </div>
           </div>
           <div class="form-group">
             <label for="register-repassword">Konfirmasi Password</label>
-            <input type="password" id="register-repassword" class="form-control" placeholder="Ulangi password" required minlength="6">
+            <div class="password-input-container" style="position: relative;">
+              <input type="password" id="register-repassword" class="form-control" style="padding-right: 40px;" placeholder="Ulangi password" required minlength="6">
+              <button type="button" onclick="togglePasswordVisibility('register-repassword')" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--gray-600); cursor: pointer; padding: 4px;">
+                <i class="fas fa-eye" id="register-repassword-eye"></i>
+              </button>
+            </div>
           </div>
           
           <div style="background-color: var(--primary-light); color: var(--primary); padding: 15px; border-radius: 12px; font-size: 0.85rem; margin-bottom: 20px; line-height: 1.5;">
