@@ -275,39 +275,72 @@
   <!-- MODAL LOGIN ADMIN -->
   <div class="modal" id="login-modal">
     <div class="modal-overlay" onclick="closeLoginModal()"></div>
-    <div class="modal-container" style="max-width: 420px; text-align: center; padding: 30px;">
+    <div class="modal-container" style="max-width: 480px; padding: 30px;">
       <div class="modal-header" style="border-bottom: none; padding: 0 0 15px 0;">
-        <h3 style="width: 100%;">Portal Admin Dusun</h3>
+        <h3 style="width: 100%; text-align: center;">Portal Pengelola Website</h3>
         <button class="modal-close" onclick="closeLoginModal()">&times;</button>
       </div>
-      <div class="modal-body" style="padding: 10px 0;">
-        <img src="https://cdn-icons-png.flaticon.com/512/8030/8030147.png" alt="Logo" style="height: 60px; margin: 0 auto 20px auto;">
-        <h2 style="font-size: 1.5rem; margin-bottom: 10px;">Dusun Dangkel Kulon</h2>
-        <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 25px; line-height: 1.5;">
-          Gunakan akun Google Anda untuk masuk atau mendaftar sebagai pengelola website.
-        </p>
+      
+      <!-- Tab Header -->
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" id="btn-login-tab" onclick="switchLoginTab('login-tab')">Masuk (Login)</button>
+        <button class="modal-tab-btn" id="btn-register-tab" onclick="switchLoginTab('register-tab')">Daftar (Register)</button>
+      </div>
+      
+      <!-- TAB 1: LOGIN -->
+      <div class="modal-tab-content active" id="login-tab">
+        <form onsubmit="loginWithPassword(event)">
+          <div class="form-group">
+            <label for="login-email">Email Google Terdaftar</label>
+            <input type="email" id="login-email" class="form-control" placeholder="nama@gmail.com" required>
+          </div>
+          <div class="form-group">
+            <label for="login-password">Password Website</label>
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required>
+          </div>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">
+            Masuk <i class="fas fa-sign-in-alt"></i>
+          </button>
+        </form>
         
-        <!-- Button Masuk/Login -->
-        <button onclick="loginWithGoogle()" class="btn-google" style="margin-bottom: 15px; width: 100%;">
-          <img src="https://cdn-icons-png.flaticon.com/512/300/300221.png" alt="Google logo">
-          Masuk dengan Google
-        </button>
-        
-        <div style="margin: 20px 0; font-size: 0.85rem; color: var(--gray-600); position: relative; display: flex; align-items: center; justify-content: center;">
-          <span style="background: var(--white); padding: 0 10px; position: relative; z-index: 2; font-weight: 600;">Belum Punya Akun?</span>
+        <div style="margin: 20px 0; font-size: 0.85rem; color: var(--gray-600); position: relative; display: flex; align-items: center; justify-content: center; text-align: center;">
+          <span style="background: var(--white); padding: 0 10px; position: relative; z-index: 2; font-weight: 600;">Atau Masuk Instan</span>
           <hr style="position: absolute; top: 50%; left: 0; width: 100%; border: none; border-top: 1px solid var(--gray-200); z-index: 1; margin: 0;">
         </div>
         
-        <!-- Button Daftar Baru -->
-        <button onclick="loginWithGoogle()" class="btn-google" style="border-color: var(--primary); color: var(--primary); width: 100%;">
+        <button onclick="loginWithGoogle()" class="btn-google" style="width: 100%;">
           <img src="https://cdn-icons-png.flaticon.com/512/300/300221.png" alt="Google logo">
-          Daftar Baru dengan Google
+          Masuk dengan Google (Auth)
         </button>
-        
-        <p class="text-muted" style="font-size: 0.75rem; margin-top: 25px; line-height: 1.4;">
-          *Pendaftaran akun baru wajib disetujui (ACC) oleh Kepala Dusun sebelum bisa mengakses dashboard.
-        </p>
       </div>
+      
+      <!-- TAB 2: REGISTER -->
+      <div class="modal-tab-content" id="register-tab">
+        <form onsubmit="startGoogleRegister(event)">
+          <div class="form-group">
+            <label for="register-username">Nama Lengkap (Username)</label>
+            <input type="text" id="register-username" class="form-control" placeholder="Contoh: Dwi Prasetyo" required>
+          </div>
+          <div class="form-group">
+            <label for="register-password">Password Website</label>
+            <input type="password" id="register-password" class="form-control" placeholder="Minimal 6 karakter" required minlength="6">
+          </div>
+          <div class="form-group">
+            <label for="register-repassword">Konfirmasi Password</label>
+            <input type="password" id="register-repassword" class="form-control" placeholder="Ulangi password" required minlength="6">
+          </div>
+          
+          <div style="background-color: var(--primary-light); color: var(--primary); padding: 15px; border-radius: 12px; font-size: 0.85rem; margin-bottom: 20px; line-height: 1.5;">
+            <i class="fas fa-info-circle"></i> Setelah mengisi form di atas, klik tombol di bawah untuk **menghubungkan akun Google asli** Anda guna verifikasi identitas.
+          </div>
+          
+          <button type="submit" class="btn-google" style="width: 100%; border-color: var(--primary); color: var(--primary);">
+            <img src="https://cdn-icons-png.flaticon.com/512/300/300221.png" alt="Google logo">
+            Hubungkan Google & Daftar
+          </button>
+        </form>
+      </div>
+      
     </div>
   </div>
 

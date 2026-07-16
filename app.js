@@ -66,6 +66,43 @@ async function checkAuth() {
     if (session) {
       currentUser = session.user;
 
+      // Cek apakah ada pendaftaran yang tertunda (pending registration)
+      const pendingRegStr = localStorage.getItem('pending_register');
+      if (pendingRegStr) {
+        try {
+          const pendingReg = JSON.parse(pendingRegStr);
+          
+          // 1. Update password pengguna di Supabase Auth
+          const { error: pwdError } = await sb.auth.updateUser({ password: pendingReg.password });
+          if (pwdError) throw pwdError;
+
+          // 2. Perbarui profil di public.profiles (menetapkan username kustom)
+          const { error: profileUpdateError } = await sb
+            .from('profiles')
+            .update({ 
+              full_name: pendingReg.username,
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', currentUser.id);
+            
+          if (profileUpdateError) throw profileUpdateError;
+
+          // Hapus antrean pendaftaran
+          localStorage.removeItem('pending_register');
+          showToast('Registrasi sukses! Akun Google telah tersambung dengan password website.', 'success');
+          
+          // Tunggu sebentar lalu muat ulang untuk mengarahkan ke dashboard
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 1500);
+          return;
+        } catch (regErr) {
+          console.error('Gagal menyelesaikan registrasi Google Link:', regErr);
+          showToast('Gagal menghubungkan password: ' + regErr.message, 'error');
+          localStorage.removeItem('pending_register');
+        }
+      }
+
       // Ambil data profil tambahan dari public.profiles
       const { data: profile, error: profileError } = await sb
         .from('profiles')
@@ -153,6 +190,101 @@ function openLoginModal() {
 function closeLoginModal() {
   const modal = document.getElementById('login-modal');
   if (modal) modal.classList.remove('active');
+}
+
+function switchLoginTab(tabId) {
+  // Ganti kelas aktif di tombol tab
+  document.querySelectorAll('.modal-tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+  
+  if (tabId === 'login-tab') {
+    document.getElementById('btn-login-tab').classList.add('active');
+  } else {
+    document.getElementById('btn-register-tab').classList.add('active');
+  }
+
+  // Ganti konten tab
+  document.querySelectorAll('.modal-tab-content').forEach(content => {
+    content.classList.remove('active');
+  });
+  document.getElementById(tabId).classList.add('active');
+}
+
+async function loginWithPassword(e) {
+  e.preventDefault();
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  if (!sb) {
+    showToast('Supabase belum dikonfigurasi!', 'error');
+    return;
+  }
+
+  showToast('Memproses masuk...', 'info');
+
+  try {
+    const { data, error } = await sb.auth.signInWithPassword({
+      email: email,
+      password: password
+    });
+
+    if (error) throw error;
+
+    showToast('Berhasil masuk! Mengarahkan...', 'success');
+    
+    // Refresh halaman atau redirect ke dashboard
+    setTimeout(() => {
+      window.location.href = 'dashboard.html';
+    }, 1000);
+  } catch (err) {
+    showToast('Gagal masuk: ' + err.message, 'error');
+  }
+}
+
+async function startGoogleRegister(e) {
+  e.preventDefault();
+  const username = document.getElementById('register-username').value.trim();
+  const password = document.getElementById('register-password').value;
+  const repassword = document.getElementById('register-repassword').value;
+
+  if (password !== repassword) {
+    showToast('Konfirmasi password tidak cocok!', 'warning');
+    return;
+  }
+
+  if (password.length < 6) {
+    showToast('Password minimal harus 6 karakter!', 'warning');
+    return;
+  }
+
+  if (!sb) {
+    showToast('Supabase belum dikonfigurasi!', 'error');
+    return;
+  }
+
+  // Simpan data pendaftaran ke localStorage
+  localStorage.setItem('pending_register', JSON.stringify({
+    username: username,
+    password: password
+  }));
+
+  showToast('Mengarahkan ke Google untuk menghubungkan akun...', 'info');
+
+  // Trigger login Google
+  const redirectUrl = window.location.origin + window.location.pathname.replace('index.html', '').replace('dashboard.html', '') + 'index.html';
+  
+  const { error } = await sb.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: redirectUrl
+    }
+  });
+
+  if (error) {
+    showToast('Gagal menghubungkan Google: ' + error.message, 'error');
+    localStorage.removeItem('pending_register');
+  }
 }
 
 // ==========================================

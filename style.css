@@ -1548,3 +1548,36 @@ textarea.form-control {
     grid-template-columns: 1fr;
   }
 }
+
+/* 12. MODAL TABS & FORMS FOR LOGIN/REGISTER */
+.modal-tabs {
+  display: flex;
+  border-bottom: 2px solid var(--gray-200);
+  margin-bottom: 24px;
+  gap: 10px;
+}
+.modal-tab-btn {
+  flex: 1;
+  padding: 12px;
+  background: none;
+  border: none;
+  font-family: var(--font-header);
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--gray-600);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: var(--transition-fast);
+  text-align: center;
+}
+.modal-tab-btn.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+}
+.modal-tab-content {
+  display: none;
+  text-align: left;
+}
+.modal-tab-content.active {
+  display: block;
+}
