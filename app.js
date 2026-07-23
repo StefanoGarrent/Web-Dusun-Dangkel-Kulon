@@ -817,8 +817,23 @@ function renderDashboardUI() {
 
   document.getElementById('dashboard-app').innerHTML = `
     <div class="dashboard-wrapper">
+      <!-- Mobile Header -->
+      <div class="dashboard-mobile-header">
+        <button class="mobile-menu-toggle" onclick="toggleSidebar()">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="logo" style="color:var(--white); display:flex; align-items:center; gap:8px;">
+          <img src="https://cdn-icons-png.flaticon.com/512/8030/8030147.png" alt="Logo" style="height:30px;">
+          <span style="font-weight:700; font-size:1.1rem; letter-spacing:1px;">DANGKEL KULON</span>
+        </div>
+        <div style="width: 30px;"></div>
+      </div>
+
+      <!-- Sidebar Overlay -->
+      <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
       <!-- SIDEBAR -->
-      <aside class="sidebar">
+      <aside class="sidebar" id="dashboard-sidebar">
         <div class="sidebar-brand">
           <div class="logo" style="color:var(--white);">
             <img src="https://cdn-icons-png.flaticon.com/512/8030/8030147.png" alt="Logo" style="height:35px;">
@@ -1173,6 +1188,23 @@ function switchPanel(panelId) {
   // Jika masuk ke panel pengaturan peta
   if (panelId === 'peta') {
     initSettingsMapPicker();
+  }
+
+  // Tutup sidebar di mobile setelah memilih menu
+  const sidebar = document.getElementById('dashboard-sidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+  if (sidebar && sidebar.classList.contains('active')) {
+    sidebar.classList.remove('active');
+    overlay.classList.remove('active');
+  }
+}
+
+function toggleSidebar() {
+  const sidebar = document.getElementById('dashboard-sidebar');
+  const overlay = document.querySelector('.sidebar-overlay');
+  if (sidebar && overlay) {
+    sidebar.classList.toggle('active');
+    overlay.classList.toggle('active');
   }
 }
 
