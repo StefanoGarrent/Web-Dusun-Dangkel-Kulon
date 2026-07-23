@@ -227,3 +227,39 @@ CREATE POLICY "Admin Delete Access" ON storage.objects
   );
 ```
 
+---
+
+## Langkah 5: Buat Tabel Pengaturan Peta (dusun_settings)
+Agar admin dapat mengubah koordinat default pusat dusun dan tingkat zoom peta dari halaman admin, jalankan script SQL berikut di **SQL Editor** Supabase Anda:
+
+```sql
+-- 1. Buat Tabel Pengaturan (dusun_settings)
+CREATE TABLE public.dusun_settings (
+  id TEXT PRIMARY KEY,
+  value JSONB NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 2. Aktifkan Row Level Security (RLS) pada tabel settings
+ALTER TABLE public.dusun_settings ENABLE ROW LEVEL SECURITY;
+
+-- 3. Kebijakan RLS agar siapa saja bisa melihat/membaca pengaturan peta (Public Read)
+CREATE POLICY "Dusun settings are viewable by everyone" ON public.dusun_settings
+  FOR SELECT USING (true);
+
+-- 4. Kebijakan RLS agar hanya admin yang sudah disetujui (Approved Admin) yang dapat mengubah pengaturan
+CREATE POLICY "Only approved admins can modify settings" ON public.dusun_settings
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.status = 'approved'
+    )
+  );
+
+-- 5. Masukkan data awal koordinat (fallback awal)
+INSERT INTO public.dusun_settings (id, value)
+VALUES ('map_config', '{"latitude": -7.3683, "longitude": 110.3340, "zoom": 15}')
+ON CONFLICT (id) DO NOTHING;
+```
+
+

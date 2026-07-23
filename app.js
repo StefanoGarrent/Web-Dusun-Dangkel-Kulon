@@ -24,6 +24,25 @@ let userProfile = null;
 let leafletMap = null;
 let umkmMarkers = [];
 let defaultCoordinates = [-7.3683, 110.3340]; // Koordinat perkiraan Grabag, Magelang / Jateng
+let defaultZoom = 15;
+
+async function loadMapSettings() {
+  try {
+    const { data, error } = await sb
+      .from('dusun_settings')
+      .select('value')
+      .eq('id', 'map_config')
+      .single();
+
+    if (error) throw error;
+    if (data && data.value) {
+      defaultCoordinates = [data.value.latitude, data.value.longitude];
+      defaultZoom = data.value.zoom || 15;
+    }
+  } catch (err) {
+    console.warn('Gagal memuat pengaturan peta dari database, menggunakan fallback lokal:', err.message);
+  }
+}
 
 // 3. DOCUMENT READY HANDLER
 document.addEventListener('DOMContentLoaded', async () => {
@@ -39,12 +58,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const path = window.location.pathname;
   if (path.includes('dashboard.html')) {
     if (sb) {
+      await loadMapSettings();
       await initDashboard();
     } else {
       window.location.href = 'index.html';
     }
   } else {
     // Halaman Publik (index.html)
+    if (sb) {
+      await loadMapSettings();
+    }
     initPublicPage();
   }
 });
@@ -327,7 +350,7 @@ function initMap() {
   if (!mapElement) return;
 
   // Inisialisasi Peta mengarah ke koordinat Dusun Dangkel Kulon
-  leafletMap = L.map('map').setView(defaultCoordinates, 15);
+  leafletMap = L.map('map').setView(defaultCoordinates, defaultZoom);
 
   // Gunakan layer OpenStreetMap dengan desain elegan
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -789,6 +812,11 @@ function renderDashboardUI() {
               <i class="fas fa-store"></i> <span>Kelola UMKM</span>
             </a>
           </li>
+          <li class="sidebar-menu-item" id="menu-peta">
+            <a href="#" class="sidebar-menu-link" onclick="switchPanel('peta'); return false;">
+              <i class="fas fa-map-marked-alt"></i> <span>Pengaturan Peta</span>
+            </a>
+          </li>
           ${isSuperAdmin ? `
           <li class="sidebar-menu-item" id="menu-persetujuan">
             <a href="#" class="sidebar-menu-link" onclick="switchPanel('persetujuan'); return false;">
@@ -845,6 +873,7 @@ function renderDashboardUI() {
             <ul style="margin: 15px 0 0 20px; line-height: 1.8;">
               <li><strong>Kelola Berita</strong>: Digunakan untuk menulis berita kegiatan pemuda/karang taruna baru atau mengedit berita yang sudah ada.</li>
               <li><strong>Kelola UMKM</strong>: Masukkan nama usaha, deskripsi, nomor WhatsApp pemilik, alamat, dan koordinat maps agar marker otomatis terbuat di peta dusun.</li>
+              <li><strong>Pengaturan Peta</strong>: Mengatur titik koordinat pusat dusun dan default zoom level untuk peta utama halaman depan.</li>
               ${isSuperAdmin ? '<li><strong>Persetujuan Akun</strong>: Khusus Kepala Dusun untuk menyetujui (ACC) atau menolak akun perangkat/ketua pemuda baru yang mendaftar.</li>' : ''}
             </ul>
           </div>
@@ -895,6 +924,50 @@ function renderDashboardUI() {
                 <tr><td colspan="6" class="text-center">Memuat data...</td></tr>
               </tbody>
             </table>
+          </div>
+        </section>
+
+        <!-- PANEL 5: PENGATURAN PETA DUSUN -->
+        <section id="panel-peta" class="dashboard-panel">
+          <h3>Pengaturan Koordinat Wilayah Dusun</h3>
+          <p class="text-muted" style="margin-bottom:20px;">Atur titik koordinat pusat wilayah dusun (center) dan tingkat zoom default untuk peta di halaman utama.</p>
+          
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+            <!-- Form Pengaturan -->
+            <div class="dash-card" style="margin:0; padding:20px;">
+              <form id="map-settings-form" onsubmit="saveMapSettings(event)">
+                <div class="form-group">
+                  <label for="setting-map-lat">Latitude Pusat Dusun</label>
+                  <input type="number" step="any" id="setting-map-lat" class="form-control" required placeholder="Contoh: -7.3683">
+                </div>
+                <div class="form-group">
+                  <label for="setting-map-lng">Longitude Pusat Dusun</label>
+                  <input type="number" step="any" id="setting-map-lng" class="form-control" required placeholder="Contoh: 110.3340">
+                </div>
+                <div class="form-group">
+                  <label for="setting-map-zoom">Default Zoom Level</label>
+                  <select id="setting-map-zoom" class="form-control" required>
+                    <option value="12">12 (Sangat Jauh)</option>
+                    <option value="13">13 (Jauh)</option>
+                    <option value="14">14 (Sedang)</option>
+                    <option value="15" selected>15 (Default)</option>
+                    <option value="16">16 (Dekat)</option>
+                    <option value="17">17 (Sangat Dekat)</option>
+                    <option value="18">18 (Detail Bangunan)</option>
+                  </select>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%; margin-top:15px;"><i class="fas fa-save"></i> Simpan Pengaturan Peta</button>
+              </form>
+            </div>
+            
+            <!-- Map Picker Visual -->
+            <div style="border: 1px solid var(--gray-200); border-radius:12px; padding:15px; background:var(--gray-50); display:flex; flex-direction:column; justify-content:space-between;">
+              <div>
+                <h4 style="margin-bottom:5px; font-size:0.95rem;"><i class="fas fa-map-pin text-primary"></i> Tentukan Titik Pusat Secara Visual</h4>
+                <p class="text-muted" style="font-size:0.8rem; margin-bottom:10px;">Klik di peta atau geser penanda (marker) untuk memperbarui nilai Latitude & Longitude di sebelah kiri.</p>
+              </div>
+              <div id="setting-map-picker" style="height: 250px; width: 100%; border-radius:8px; border:1px solid var(--gray-300); margin-top:10px;"></div>
+            </div>
           </div>
         </section>
 
@@ -1067,6 +1140,11 @@ function switchPanel(panelId) {
   });
   const targetPanel = document.getElementById(`panel-${panelId}`);
   if (targetPanel) targetPanel.classList.add('active');
+
+  // Jika masuk ke panel pengaturan peta
+  if (panelId === 'peta') {
+    initSettingsMapPicker();
+  }
 }
 
 // Inisialisasi Map Picker di Modal
@@ -1116,6 +1194,94 @@ function triggerDashboardMapInit() {
       dashboardMap.invalidateSize();
     }, 100);
   }, 300);
+}
+
+// Pengaturan Peta Pusat Dusun
+let settingsMap = null;
+let settingsMarker = null;
+
+function initSettingsMapPicker() {
+  const latField = document.getElementById('setting-map-lat');
+  const lngField = document.getElementById('setting-map-lng');
+  const zoomField = document.getElementById('setting-map-zoom');
+
+  latField.value = defaultCoordinates[0];
+  lngField.value = defaultCoordinates[1];
+  zoomField.value = defaultZoom;
+
+  setTimeout(() => {
+    if (settingsMap) {
+      settingsMap.remove();
+    }
+
+    settingsMap = L.map('setting-map-picker').setView(defaultCoordinates, defaultZoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(settingsMap);
+
+    settingsMarker = L.marker(defaultCoordinates, { draggable: true }).addTo(settingsMap);
+
+    settingsMarker.on('dragend', function (e) {
+      const position = settingsMarker.getLatLng();
+      latField.value = position.lat.toFixed(6);
+      lngField.value = position.lng.toFixed(6);
+    });
+
+    settingsMap.on('click', (e) => {
+      const lat = e.latlng.lat;
+      const lng = e.latlng.lng;
+      latField.value = lat.toFixed(6);
+      lngField.value = lng.toFixed(6);
+      settingsMarker.setLatLng(e.latlng);
+    });
+
+    settingsMap.on('zoomend', () => {
+      const currentZoom = settingsMap.getZoom();
+      if (document.querySelector(`#setting-map-zoom option[value="${currentZoom}"]`)) {
+        zoomField.value = currentZoom;
+      }
+    });
+
+    zoomField.onchange = () => {
+      settingsMap.setZoom(parseInt(zoomField.value));
+    };
+
+    setTimeout(() => {
+      settingsMap.invalidateSize();
+    }, 100);
+  }, 300);
+}
+
+async function saveMapSettings(e) {
+  e.preventDefault();
+  const lat = parseFloat(document.getElementById('setting-map-lat').value);
+  const lng = parseFloat(document.getElementById('setting-map-lng').value);
+  const zoom = parseInt(document.getElementById('setting-map-zoom').value);
+
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn.innerHTML;
+  submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+  submitBtn.disabled = true;
+
+  try {
+    const { error } = await sb
+      .from('dusun_settings')
+      .upsert({
+        id: 'map_config',
+        value: { latitude: lat, longitude: lng, zoom: zoom },
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) throw error;
+
+    defaultCoordinates = [lat, lng];
+    defaultZoom = zoom;
+
+    showToast('Pengaturan peta dusun berhasil disimpan!', 'success');
+  } catch (err) {
+    showToast('Gagal menyimpan pengaturan peta: ' + err.message, 'error');
+  } finally {
+    submitBtn.innerHTML = originalBtnText;
+    submitBtn.disabled = false;
+  }
 }
 
 // LOAD DATA DASHBOARD
