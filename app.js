@@ -551,13 +551,13 @@ function renderUMKM(list) {
         <div class="umkm-owner">Pemilik: ${escapeHTML(umkm.owner)}</div>
         <p class="umkm-desc">${escapeHTML(umkm.description || '')}</p>
         <div class="umkm-contact">
-          <span class="umkm-address"><i class="fas fa-map-marker-alt text-primary"></i> ${escapeHTML(umkm.address)}</span>
-          <div style="display: flex; gap: 6px; align-items: center;">
-            <a href="${waLink}" target="_blank" class="btn btn-whatsapp" style="display: inline-flex; align-items: center; gap: 4px;">
+          <span class="umkm-address" style="flex: 1; margin-right: 15px;"><i class="fas fa-map-marker-alt text-primary"></i> ${escapeHTML(umkm.address)}</span>
+          <div style="display: flex; flex-direction: column; gap: 6px; align-items: stretch; min-width: 105px;">
+            <a href="${waLink}" target="_blank" class="btn btn-whatsapp" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; text-align: center;">
               <i class="fab fa-whatsapp"></i> Hubungi
             </a>
             ${hasCoordinates ? `
-            <a href="${gmapsLink}" target="_blank" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; border-radius: var(--border-radius-sm); border: 1px solid var(--primary); color: var(--primary); background: transparent;">
+            <a href="${gmapsLink}" target="_blank" class="btn btn-outline" style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; border-radius: var(--border-radius-sm); border: 1px solid var(--primary); color: var(--primary); background: transparent; text-align: center;">
               <i class="fas fa-route"></i> Rute
             </a>
             ` : ''}
