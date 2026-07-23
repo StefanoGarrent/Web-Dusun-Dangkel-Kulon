@@ -682,7 +682,7 @@ function initStatsChart() {
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          position: 'right',
+          position: window.innerWidth < 576 ? 'bottom' : 'right',
           labels: {
             font: {
               family: 'Plus Jakarta Sans',

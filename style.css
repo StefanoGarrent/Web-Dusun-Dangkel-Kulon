@@ -1534,8 +1534,15 @@ textarea.form-control {
 }
 
 @media (max-width: 768px) {
+  html, body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
   html {
     font-size: 14px;
+  }
+  .section {
+    padding: 50px 0 !important;
   }
   .logo {
     font-size: 1.25rem;
@@ -1554,7 +1561,30 @@ textarea.form-control {
     height: 350px;
   }
   .hero-content h1 {
-    font-size: 2.8rem;
+    font-size: 2.2rem !important;
+  }
+  .hero-image-wrapper {
+    max-width: 100% !important;
+    width: 100% !important;
+    transform: none !important;
+  }
+  .hero-image-wrapper img {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  .profile-grid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+  }
+  .stats-container {
+    grid-template-columns: 1fr !important;
+  }
+  .news-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .umkm-grid {
+    grid-template-columns: 1fr !important;
   }
   .nav-links {
     position: fixed;
@@ -1568,6 +1598,7 @@ textarea.form-control {
     gap: 24px;
     transition: var(--transition-normal);
     box-shadow: var(--shadow-lg);
+    overflow-y: auto;
     border-top: 1px solid var(--gray-200);
   }
   .nav-links.active {
