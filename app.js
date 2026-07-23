@@ -364,9 +364,21 @@ function initMap() {
     iconAnchor: [19, 38]
   });
 
+  const popupContent = `
+    <div style="font-family: var(--font-body); padding: 5px 0;">
+      <strong style="font-size:1.05rem; color:var(--primary); display:block; margin-bottom: 4px;">Kantor Dusun Dangkel Kulon</strong>
+      <span style="font-size: 0.85rem; color: var(--gray-600); display:block; margin-bottom: 8px;">Pusat Pelayanan Warga Dangkel Kulon.</span>
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${defaultCoordinates[0]},${defaultCoordinates[1]}" 
+         target="_blank" 
+         style="display: inline-flex; align-items: center; gap: 6px; color: white !important; font-size: 0.75rem; padding: 6px 12px; border-radius: 4px; background-color: var(--primary); text-decoration: none; font-weight: 600;">
+        <i class="fas fa-route"></i> Petunjuk Rute
+      </a>
+    </div>
+  `;
+
   L.marker(defaultCoordinates, { icon: homeIcon })
     .addTo(leafletMap)
-    .bindPopup('<b>Kantor Dusun Dangkel Kulon</b><br>Pusat Pelayanan Warga Dangkel Kulon.')
+    .bindPopup(popupContent)
     .openPopup();
 }
 
@@ -565,11 +577,18 @@ function addUMKMMarkers(list) {
       const marker = L.marker([umkm.latitude, umkm.longitude], { icon: storeIcon })
         .addTo(leafletMap)
         .bindPopup(`
-          <div style="font-family: var(--font-body);">
-            <strong style="font-size:1.1rem; color:var(--primary);">${escapeHTML(umkm.name)}</strong><br>
-            <span style="font-size:0.8rem; color:var(--secondary); font-weight:700;">${escapeHTML(umkm.category)}</span><br>
-            <p style="margin:5px 0; font-size:0.85rem;">${escapeHTML(umkm.description || '')}</p>
-            <a href="https://wa.me/${formatPhoneNumber(umkm.whatsapp_number)}" target="_blank" style="color:#25d366; font-weight:bold; font-size:0.85rem;"><i class="fab fa-whatsapp"></i> Hubungi Pemilik</a>
+          <div style="font-family: var(--font-body); padding: 5px 0;">
+            <strong style="font-size:1.05rem; color:var(--primary); display:block; margin-bottom: 2px;">${escapeHTML(umkm.name)}</strong>
+            <span style="font-size:0.8rem; color:var(--secondary); font-weight:700; display:block; margin-bottom: 6px;">${escapeHTML(umkm.category)}</span>
+            <p style="margin:5px 0 10px 0; font-size:0.85rem; color:var(--gray-600);">${escapeHTML(umkm.description || '')}</p>
+            <div style="display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap;">
+              <a href="https://wa.me/${formatPhoneNumber(umkm.whatsapp_number)}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; color: white !important; font-size: 0.75rem; padding: 5px 10px; border-radius: 4px; background-color: #25d366; text-decoration: none; font-weight: 600;">
+                <i class="fab fa-whatsapp"></i> Hubungi Pemilik
+              </a>
+              <a href="https://www.google.com/maps/dir/?api=1&destination=${umkm.latitude},${umkm.longitude}" target="_blank" style="display: inline-flex; align-items: center; gap: 6px; color: white !important; font-size: 0.75rem; padding: 5px 10px; border-radius: 4px; background-color: var(--primary); text-decoration: none; font-weight: 600;">
+                <i class="fas fa-route"></i> Petunjuk Rute
+              </a>
+            </div>
           </div>
         `);
       umkmMarkers.push(marker);
