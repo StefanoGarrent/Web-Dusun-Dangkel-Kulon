@@ -272,6 +272,90 @@ CREATE POLICY "Only approved admins can modify settings" ON public.dusun_setting
 INSERT INTO public.dusun_settings (id, value)
 VALUES ('map_config', '{"latitude": -7.3683, "longitude": 110.3340, "zoom": 15}')
 ON CONFLICT (id) DO NOTHING;
+
+---
+
+## Langkah 6: Pembaruan Tabel Profiles untuk Fitur Daftar Pengguna
+Jalankan script SQL berikut di **SQL Editor** Supabase Anda untuk menambahkan kolom jabatan (`title`), sistem pengajuan penurunan status (`downgrade_request_by`), serta memperbarui kebijakan RLS agar mendukung pembagian peran (Developer, Super Admin, dan Admin):
+
+```sql
+-- 1. Tambah kolom title ke public.profiles
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS title TEXT;
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_title_check;
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_title_check CHECK (title IN ('Kepala Dusun', 'Ketua Pemuda', 'Anggota Pemuda') OR title IS NULL);
+
+-- 2. Tambah kolom downgrade_request_by ke public.profiles
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS downgrade_request_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL;
+
+-- 3. Hapus kebijakan RLS profiles lama
+DROP POLICY IF EXISTS "Public profiles are viewable by everyone" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can update other profiles except developer" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can delete profiles except developer" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can update other profiles based on rules" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can delete profiles based on rules" ON public.profiles;
+
+-- 4. Buat kebijakan RLS baru yang aman sesuai pembagian hak akses:
+-- A. Siapa saja dapat melihat profil
+CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles
+  FOR SELECT USING (true);
+
+-- B. Pengguna dapat mengubah profil mereka sendiri
+CREATE POLICY "Users can update their own profile" ON public.profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+-- C. Pembagian hak ubah profil admin lain
+CREATE POLICY "Admins can update other profiles based on rules" ON public.profiles
+  FOR UPDATE USING (
+    (
+      -- Developer bebas mengubah profil siapa saja
+      EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid() AND profiles.role = 'developer'
+      )
+    ) OR
+    (
+      -- Super Admin boleh mengubah profil admin biasa, atau super_admin lain (hanya untuk request downgrade)
+      EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid() AND profiles.role = 'super_admin'
+      )
+      AND (
+        (role = 'admin')
+        OR
+        (role = 'super_admin')
+      )
+    ) OR
+    (
+      -- Ketua Pemuda boleh mengubah Anggota Pemuda lain (untuk keperluan transfer jabatan Ketua Pemuda)
+      EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid() AND profiles.role = 'admin' AND profiles.title = 'Ketua Pemuda'
+      )
+      AND role = 'admin'
+      AND (title = 'Anggota Pemuda' OR title IS NULL)
+    )
+  );
+
+-- D. Pembagian hak hapus profil admin lain
+CREATE POLICY "Admins can delete profiles based on rules" ON public.profiles
+  FOR DELETE USING (
+    (
+      -- Developer bebas menghapus profil siapa saja
+      EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid() AND profiles.role = 'developer'
+      )
+    ) OR
+    (
+      -- Super Admin boleh menghapus profil admin biasa
+      EXISTS (
+        SELECT 1 FROM public.profiles
+        WHERE profiles.id = auth.uid() AND profiles.role = 'super_admin'
+      )
+      AND role = 'admin'
+    )
+  );
 ```
 
 

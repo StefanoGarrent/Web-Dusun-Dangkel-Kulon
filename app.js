@@ -864,10 +864,15 @@ function renderDashboardUI() {
           ${isSuperAdmin ? `
           <li class="sidebar-menu-item" id="menu-persetujuan">
             <a href="#" class="sidebar-menu-link" onclick="switchPanel('persetujuan'); return false;">
-              <i class="fas fa-users-cog"></i> <span>Persetujuan Akun</span>
+              <i class="fas fa-user-check"></i> <span>Persetujuan Akun</span>
             </a>
           </li>
           ` : ''}
+          <li class="sidebar-menu-item" id="menu-pengguna">
+            <a href="#" class="sidebar-menu-link" onclick="switchPanel('pengguna'); return false;">
+              <i class="fas fa-users"></i> <span>Daftar Pengguna</span>
+            </a>
+          </li>
           <li class="sidebar-menu-item">
             <a href="index.html" class="sidebar-menu-link">
               <i class="fas fa-globe"></i> <span>Lihat Website</span>
@@ -1037,6 +1042,31 @@ function renderDashboardUI() {
           </div>
         </section>
         ` : ''}
+
+        <!-- PANEL 6: DAFTAR PENGGUNA -->
+        <section id="panel-pengguna" class="dashboard-panel">
+          <div class="dash-panel-header">
+            <h3>Daftar Pengguna / Admin</h3>
+          </div>
+          <p class="text-muted" style="margin-bottom:20px;">Daftar seluruh akun admin terdaftar pada website Dusun Dangkel Kulon beserta pengelolaan hak akses dan jabatan.</p>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nama Pengguna</th>
+                  <th>Email</th>
+                  <th>Role</th>
+                  <th>Status Akun</th>
+                  <th>Jabatan / Title</th>
+                  <th>Aksi Pengelolaan</th>
+                </tr>
+              </thead>
+              <tbody id="dash-users-all-table-body">
+                <tr><td colspan="6" class="text-center">Memuat data...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -1188,6 +1218,11 @@ function switchPanel(panelId) {
   // Jika masuk ke panel pengaturan peta
   if (panelId === 'peta') {
     initSettingsMapPicker();
+  }
+  
+  // Jika masuk ke panel daftar pengguna
+  if (panelId === 'pengguna') {
+    loadAllUsers();
   }
 
   // Tutup sidebar di mobile setelah memilih menu
@@ -2173,4 +2208,328 @@ function loadMockUMKM() {
   window.allUmkmList = mockUmkm;
   renderUMKM(mockUmkm);
   addUMKMMarkers(mockUmkm);
+}
+
+// ==========================================
+// PENGELOLAAN DAFTAR PENGGUNA (ADMIN/DEVELOPER)
+// ==========================================
+
+async function loadAllUsers() {
+  const tbody = document.getElementById('dash-users-all-table-body');
+  if (!tbody) return;
+
+  tbody.innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data pengguna...</td></tr>';
+
+  try {
+    const { data: users, error } = await sb
+      .from('profiles')
+      .select(`
+        *,
+        requester:downgrade_request_by(full_name, email)
+      `)
+      .order('role', { ascending: false });
+
+    if (error) throw error;
+
+    tbody.innerHTML = '';
+    if (users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Tidak ada pengguna ditemukan.</td></tr>';
+      return;
+    }
+
+    const currentUserId = userProfile.id;
+    const currentUserRole = userProfile.role;
+    const currentUserTitle = userProfile.title;
+
+    users.forEach(user => {
+      const tr = document.createElement('tr');
+      const isSelf = user.id === currentUserId;
+
+      // 1. Role Display
+      let roleBadge = '';
+      if (user.role === 'developer') {
+        roleBadge = '<span class="badge" style="background-color:#1e293b; color:#ffffff;">Developer</span>';
+      } else if (user.role === 'super_admin') {
+        roleBadge = '<span class="badge" style="background-color:#ffeeba; color:#856404;">Super Admin</span>';
+      } else {
+        roleBadge = '<span class="badge" style="background-color:#e2e8f0; color:#475569;">Admin</span>';
+      }
+
+      // 2. Status Display
+      const statusClass = `badge-${user.status}`;
+      const statusText = user.status === 'pending' ? 'Menunggu ACC' :
+        user.status === 'approved' ? 'Disetujui' : 'Ditolak';
+      const statusBadge = `<span class="badge ${statusClass}">${statusText}</span>`;
+
+      // 3. Title (Jabatan) Display
+      const displayTitle = user.title ? `<strong>${escapeHTML(user.title)}</strong>` : '<span class="text-muted" style="font-size:0.8rem;">Tidak Ada Jabatan</span>';
+
+      // 4. Action Cell Rendering
+      let actionHTML = '';
+
+      if (currentUserRole === 'developer') {
+        // Developer can do anything to anyone
+        actionHTML = `
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="display:flex; gap:4px; align-items:center;">
+              <span style="font-size:0.75rem; color:var(--gray-600); min-width:60px;">Role:</span>
+              <select class="form-control-sm" onchange="updateUserRole('${user.id}', this.value)" ${isSelf ? 'disabled' : ''}>
+                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                <option value="super_admin" ${user.role === 'super_admin' ? 'selected' : ''}>Super Admin</option>
+                <option value="developer" ${user.role === 'developer' ? 'selected' : ''}>Developer</option>
+              </select>
+            </div>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <span style="font-size:0.75rem; color:var(--gray-600); min-width:60px;">Jabatan:</span>
+              <select class="form-control-sm" onchange="updateUserTitle('${user.id}', this.value)">
+                <option value="" ${!user.title ? 'selected' : ''}>Tanpa Jabatan</option>
+                <option value="Kepala Dusun" ${user.title === 'Kepala Dusun' ? 'selected' : ''}>Kepala Dusun</option>
+                <option value="Ketua Pemuda" ${user.title === 'Ketua Pemuda' ? 'selected' : ''}>Ketua Pemuda</option>
+                <option value="Anggota Pemuda" ${user.title === 'Anggota Pemuda' ? 'selected' : ''}>Anggota Pemuda</option>
+              </select>
+            </div>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <span style="font-size:0.75rem; color:var(--gray-600); min-width:60px;">Status:</span>
+              <select class="form-control-sm" onchange="updateUserStatus('${user.id}', this.value)" ${isSelf ? 'disabled' : ''}>
+                <option value="pending" ${user.status === 'pending' ? 'selected' : ''}>Pending</option>
+                <option value="approved" ${user.status === 'approved' ? 'selected' : ''}>Approved</option>
+                <option value="rejected" ${user.status === 'rejected' ? 'selected' : ''}>Rejected</option>
+              </select>
+            </div>
+            <div style="display:flex; gap:6px; margin-top:4px;">
+              ${!isSelf ? `<button class="btn-action btn-delete" style="padding:4px 8px; font-size:0.75rem;" onclick="deleteUserFromList('${user.id}')"><i class="fas fa-trash-alt"></i> Hapus</button>` : ''}
+              ${user.downgrade_request_by ? `
+                <button class="btn-action" style="padding:4px 8px; font-size:0.75rem; background-color:#ffccd5; color:#a1001a;" onclick="executeDowngradeRequest('${user.id}')"><i class="fas fa-user-minus"></i> Proses Downgrade</button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      } else if (currentUserRole === 'super_admin') {
+        if (user.role === 'developer') {
+          // Cannot edit developer
+          actionHTML = '<span class="text-muted" style="font-size:0.8rem;"><i class="fas fa-lock text-muted"></i> Akses Terkunci</span>';
+        } else if (user.role === 'super_admin') {
+          if (isSelf) {
+            actionHTML = '<span class="text-muted" style="font-size:0.8rem;">Akun Anda Sendiri</span>';
+          } else {
+            // Request downgrade for other super_admin
+            if (user.downgrade_request_by) {
+              const requesterName = user.requester ? user.requester.full_name : 'Super Admin';
+              actionHTML = `<span class="text-muted" style="font-size:0.75rem;"><i class="fas fa-clock text-warning"></i> Downgrade diajukan oleh ${escapeHTML(requesterName)}</span>`;
+            } else {
+              actionHTML = `<button class="btn-action" style="background-color:#ffeeba; color:#856404; font-size:0.75rem; padding:5px 10px;" onclick="requestDowngradeUser('${user.id}')"><i class="fas fa-user-minus"></i> Ajukan Downgrade</button>`;
+            }
+          }
+        } else {
+          // Admin biasa
+          actionHTML = `
+            <div style="display:flex; flex-direction:column; gap:6px;">
+              <div style="display:flex; gap:4px; align-items:center;">
+                <span style="font-size:0.75rem; color:var(--gray-600); min-width:60px;">Jabatan:</span>
+                <select class="form-control-sm" onchange="updateUserTitle('${user.id}', this.value)">
+                  <option value="" ${!user.title ? 'selected' : ''}>Tanpa Jabatan</option>
+                  <option value="Ketua Pemuda" ${user.title === 'Ketua Pemuda' ? 'selected' : ''}>Ketua Pemuda</option>
+                  <option value="Anggota Pemuda" ${user.title === 'Anggota Pemuda' ? 'selected' : ''}>Anggota Pemuda</option>
+                </select>
+              </div>
+              <div style="display:flex; gap:6px; margin-top:4px;">
+                ${user.status === 'approved' ? `
+                  <button class="btn-action" style="background-color:#fff3cd; color:#856404; padding:4px 8px; font-size:0.75rem;" onclick="promoteUserFromList('${user.id}')"><i class="fas fa-user-shield"></i> Jadikan Super Admin</button>
+                ` : `
+                  <button class="btn-action btn-approve" style="padding:4px 8px; font-size:0.75rem;" onclick="updateUserStatus('${user.id}', 'approved')"><i class="fas fa-check"></i> ACC</button>
+                  <button class="btn-action btn-reject" style="padding:4px 8px; font-size:0.75rem;" onclick="updateUserStatus('${user.id}', 'rejected')"><i class="fas fa-times"></i> Tolak</button>
+                `}
+                <button class="btn-action btn-delete" style="padding:4px 8px; font-size:0.75rem;" onclick="deleteUserFromList('${user.id}')"><i class="fas fa-trash-alt"></i> Hapus</button>
+              </div>
+            </div>
+          `;
+        }
+      } else {
+        // Regular Admin
+        if (currentUserTitle === 'Ketua Pemuda' && user.role === 'admin' && (user.title === 'Anggota Pemuda' || !user.title)) {
+          // Can transfer title
+          actionHTML = `<button class="btn-action" style="background-color:#cce5ff; color:#004085; font-size:0.75rem; padding:6px 12px;" onclick="transferTitle('${user.id}', '${user.full_name || user.email}')"><i class="fas fa-exchange-alt"></i> Transfer Ketua Pemuda</button>`;
+        } else {
+          actionHTML = '<span class="text-muted" style="font-size:0.8rem;"><i class="fas fa-lock text-muted"></i> Akses Terkunci</span>';
+        }
+      }
+
+      // Add downgrade request details below title if present
+      let finalTitleDisplay = displayTitle;
+      if (user.downgrade_request_by && user.role === 'super_admin') {
+        const reqName = user.requester ? user.requester.full_name : 'Super Admin';
+        finalTitleDisplay += `<br><span class="badge badge-warning" style="font-size:0.7rem; margin-top:4px; display:inline-block; line-height:1.2;">Diminta Downgrade oleh ${escapeHTML(reqName)}</span>`;
+      }
+
+      tr.innerHTML = `
+        <td>
+          <div class="author-info">
+            <img src="${user.avatar_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png'}" alt="Avatar">
+            <strong>${escapeHTML(user.full_name || 'N/A')}</strong>
+          </div>
+        </td>
+        <td><code>${escapeHTML(user.email)}</code></td>
+        <td>${roleBadge}</td>
+        <td>${statusBadge}</td>
+        <td>${finalTitleDisplay}</td>
+        <td>${actionHTML}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (err) {
+    console.error('Error loadAllUsers:', err);
+    tbody.innerHTML = `<tr><td colspan="6" class="text-center text-danger"><i class="fas fa-exclamation-triangle"></i> Gagal memuat data: ${err.message}</td></tr>`;
+  }
+}
+
+async function updateUserRole(userId, newRole) {
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .update({ role: newRole, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) throw error;
+    showToast('Role pengguna berhasil diubah.', 'success');
+    loadAllUsers();
+  } catch (err) {
+    showToast('Gagal mengubah role: ' + err.message, 'error');
+  }
+}
+
+async function updateUserTitle(userId, newTitle) {
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .update({ title: newTitle || null, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) throw error;
+    showToast('Jabatan pengguna berhasil diubah.', 'success');
+    loadAllUsers();
+  } catch (err) {
+    showToast('Gagal mengubah jabatan: ' + err.message, 'error');
+  }
+}
+
+async function updateUserStatus(userId, newStatus) {
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) throw error;
+    showToast('Status pengguna berhasil diubah.', 'success');
+    loadAllUsers();
+    const pendingTbody = document.getElementById('dash-users-table-body');
+    if (pendingTbody) loadDashboardUsers();
+  } catch (err) {
+    showToast('Gagal mengubah status: ' + err.message, 'error');
+  }
+}
+
+async function deleteUserFromList(userId) {
+  if (!confirm('Apakah Anda yakin ingin menghapus akun ini secara permanen?')) return;
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .delete()
+      .eq('id', userId);
+
+    if (error) throw error;
+    showToast('Akun berhasil dihapus.', 'success');
+    loadAllUsers();
+    const pendingTbody = document.getElementById('dash-users-table-body');
+    if (pendingTbody) loadDashboardUsers();
+  } catch (err) {
+    showToast('Gagal menghapus akun: ' + err.message, 'error');
+  }
+}
+
+async function promoteUserFromList(userId) {
+  if (!confirm('Apakah Anda yakin ingin mempromosikan pengguna ini menjadi Super Admin?')) return;
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .update({ role: 'super_admin', title: 'Kepala Dusun', updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) throw error;
+    showToast('Pengguna berhasil dipromosikan menjadi Super Admin.', 'success');
+    loadAllUsers();
+  } catch (err) {
+    showToast('Gagal mempromosikan: ' + err.message, 'error');
+  }
+}
+
+async function requestDowngradeUser(userId) {
+  if (!confirm('Apakah Anda yakin ingin mengajukan permohonan downgrade untuk akun Super Admin ini ke Developer?')) return;
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .update({ downgrade_request_by: userProfile.id, updated_at: new Date().toISOString() })
+      .eq('id', userId);
+
+    if (error) throw error;
+    showToast('Permohonan downgrade berhasil dikirim ke Developer.', 'success');
+    loadAllUsers();
+  } catch (err) {
+    showToast('Gagal mengajukan downgrade: ' + err.message, 'error');
+  }
+}
+
+async function executeDowngradeRequest(userId) {
+  if (!confirm('Apakah Anda yakin ingin mengeksekusi permohonan downgrade ini? Akun target akan diturunkan menjadi Admin biasa.')) return;
+  try {
+    const { error } = await sb
+      .from('profiles')
+      .update({ 
+        role: 'admin', 
+        title: null, 
+        downgrade_request_by: null, 
+        updated_at: new Date().toISOString() 
+      })
+      .eq('id', userId);
+
+    if (error) throw error;
+    showToast('Akun berhasil di-downgrade menjadi Admin.', 'success');
+    loadAllUsers();
+  } catch (err) {
+    showToast('Gagal memproses downgrade: ' + err.message, 'error');
+  }
+}
+
+async function transferTitle(targetUserId, targetUserName) {
+  if (!confirm(`Apakah Anda yakin ingin men-transfer jabatan "Ketua Pemuda" Anda kepada ${escapeHTML(targetUserName)}? Anda akan turun menjadi "Anggota Pemuda".`)) return;
+  
+  try {
+    // 1. Update target user to 'Ketua Pemuda'
+    const { error: error1 } = await sb
+      .from('profiles')
+      .update({ title: 'Ketua Pemuda', updated_at: new Date().toISOString() })
+      .eq('id', targetUserId);
+      
+    if (error1) throw error1;
+
+    // 2. Update current user to 'Anggota Pemuda'
+    const { error: error2 } = await sb
+      .from('profiles')
+      .update({ title: 'Anggota Pemuda', updated_at: new Date().toISOString() })
+      .eq('id', userProfile.id);
+
+    if (error2) throw error2;
+
+    // Update userProfile local cache
+    userProfile.title = 'Anggota Pemuda';
+
+    showToast('Jabatan Ketua Pemuda berhasil di-transfer!', 'success');
+    loadAllUsers();
+    
+    // Reload sidebar to display updated title
+    renderDashboardUI();
+    switchPanel('pengguna');
+  } catch (err) {
+    showToast('Gagal mentransfer jabatan: ' + err.message, 'error');
+  }
 } 
