@@ -20,7 +20,7 @@ CREATE TABLE public.profiles (
   email TEXT NOT NULL,
   full_name TEXT,
   avatar_url TEXT,
-  role TEXT DEFAULT 'admin' CHECK (role IN ('super_admin', 'admin')),
+  role TEXT DEFAULT 'admin' CHECK (role IN ('super_admin', 'admin', 'developer')),
   status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
@@ -75,9 +75,9 @@ BEGIN
     new.email,
     new.raw_user_meta_data->>'full_name',
     new.raw_user_meta_data->>'avatar_url',
-    -- Hanya email Developer yang otomatis menjadi 'super_admin' dan 'approved' saat pertama kali login.
-    -- Kepala Dusun dan admin lainnya bisa dipromosikan ke 'super_admin' melalui dashboard oleh akun super_admin ini.
-    CASE WHEN new.email = 'stefano.garrentk@gmail.com' THEN 'super_admin' ELSE 'admin' END,
+    -- Hanya email Developer yang otomatis menjadi 'developer' dan 'approved' saat pertama kali login.
+    -- Kepala Dusun dan admin lainnya bisa dipromosikan ke 'super_admin' melalui dashboard oleh akun developer atau super_admin ini.
+    CASE WHEN new.email = 'stefano.garrentk@gmail.com' THEN 'developer' ELSE 'admin' END,
     CASE WHEN new.email = 'stefano.garrentk@gmail.com' THEN 'approved' ELSE 'pending' END
   );
   RETURN new;
@@ -100,12 +100,24 @@ CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles
 CREATE POLICY "Users can update their own profile" ON public.profiles
   FOR UPDATE USING (auth.uid() = id);
 
-CREATE POLICY "Super Admins can update any profile (Approve/Reject)" ON public.profiles
+CREATE POLICY "Admins can update other profiles except developer" ON public.profiles
   FOR UPDATE USING (
     EXISTS (
       SELECT 1 FROM public.profiles
-      WHERE profiles.id = auth.uid() AND profiles.role = 'super_admin'
+      WHERE profiles.id = auth.uid() AND profiles.role IN ('super_admin', 'developer')
     )
+    AND role != 'developer'
+    AND email != 'stefano.garrentk@gmail.com'
+  );
+
+CREATE POLICY "Admins can delete profiles except developer" ON public.profiles
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.role IN ('super_admin', 'developer')
+    )
+    AND role != 'developer'
+    AND email != 'stefano.garrentk@gmail.com'
   );
 
 -- Kebijakan untuk tabel NEWS

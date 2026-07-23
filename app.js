@@ -812,7 +812,7 @@ function renderRejectedState() {
 }
 
 function renderDashboardUI() {
-  const isSuperAdmin = userProfile.role === 'super_admin';
+  const isSuperAdmin = userProfile.role === 'super_admin' || userProfile.role === 'developer';
   const avatar = userProfile.avatar_url || 'https://cdn-icons-png.flaticon.com/512/149/149071.png';
 
   document.getElementById('dashboard-app').innerHTML = `
@@ -863,7 +863,7 @@ function renderDashboardUI() {
           <img src="${avatar}" alt="Avatar" class="sidebar-avatar">
           <div class="sidebar-user-info">
             <h5>${escapeHTML(userProfile.full_name || 'Admin')}</h5>
-            <p>${isSuperAdmin ? 'Kepala Dusun' : 'Perangkat / Pemuda'}</p>
+            <p>${userProfile.role === 'developer' ? 'Developer' : (userProfile.role === 'super_admin' ? 'Kepala Dusun' : 'Perangkat / Pemuda')}</p>
           </div>
           <button class="btn-logout" onclick="logout()" title="Keluar"><i class="fas fa-sign-out-alt"></i></button>
         </div>
@@ -1419,11 +1419,12 @@ async function loadDashboardUsers() {
   if (!tbody) return;
 
   try {
-    // Ambil data profil dari database (kecuali akun super_admin agar tidak bisa diubah statusnya sendiri)
+    // Ambil data profil dari database (kecuali akun super_admin & developer agar tidak bisa diubah statusnya sendiri)
     const { data: users, error } = await sb
       .from('profiles')
       .select('*')
       .neq('role', 'super_admin')
+      .neq('role', 'developer')
       .order('created_at', { ascending: false });
 
     if (error) throw error;
@@ -1453,7 +1454,7 @@ async function loadDashboardUsers() {
           <div class="actions-cell">
             ${user.status !== 'approved' ? `<button class="btn-action btn-approve" onclick="verifyUser('${user.id}', 'approved')"><i class="fas fa-check"></i> ACC</button>` : ''}
             ${user.status !== 'rejected' ? `<button class="btn-action btn-reject" onclick="verifyUser('${user.id}', 'rejected')"><i class="fas fa-times"></i> Tolak</button>` : ''}
-            ${user.status === 'approved' && user.role !== 'super_admin' ? `<button class="btn-action" style="background-color:#fff3cd; color:#856404;" onclick="promoteUser('${user.id}')"><i class="fas fa-user-shield"></i> Jadikan Super Admin</button>` : ''}
+            ${user.status === 'approved' && user.role !== 'super_admin' && user.role !== 'developer' ? `<button class="btn-action" style="background-color:#fff3cd; color:#856404;" onclick="promoteUser('${user.id}')"><i class="fas fa-user-shield"></i> Jadikan Super Admin</button>` : ''}
             <button class="btn-action btn-delete" onclick="deleteUser('${user.id}')"><i class="fas fa-trash-alt"></i> Hapus</button>
           </div>
         </td>
