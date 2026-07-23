@@ -538,6 +538,9 @@ function renderUMKM(list) {
     const waLink = `https://wa.me/${formatPhoneNumber(umkm.whatsapp_number)}?text=Halo%20${encodeURIComponent(umkm.name)},%20saya%20tertarik%20dengan%20produk%20Anda%20dari%20web%20Dusun.`;
     const image = umkm.image_url || 'https://images.unsplash.com/photo-1473187983305-f615310e7daa?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
 
+    const hasCoordinates = umkm.latitude && umkm.longitude;
+    const gmapsLink = hasCoordinates ? `https://www.google.com/maps/dir/?api=1&destination=${umkm.latitude},${umkm.longitude}` : '#';
+
     card.innerHTML = `
       <div class="umkm-image">
         <img src="${image}" alt="${umkm.name}" onerror="this.src='https://images.unsplash.com/photo-1473187983305-f615310e7daa?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'">
@@ -549,9 +552,16 @@ function renderUMKM(list) {
         <p class="umkm-desc">${escapeHTML(umkm.description || '')}</p>
         <div class="umkm-contact">
           <span class="umkm-address"><i class="fas fa-map-marker-alt text-primary"></i> ${escapeHTML(umkm.address)}</span>
-          <a href="${waLink}" target="_blank" class="btn btn-whatsapp">
-            <i class="fab fa-whatsapp"></i> Hubungi
-          </a>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <a href="${waLink}" target="_blank" class="btn btn-whatsapp" style="display: inline-flex; align-items: center; gap: 4px;">
+              <i class="fab fa-whatsapp"></i> Hubungi
+            </a>
+            ${hasCoordinates ? `
+            <a href="${gmapsLink}" target="_blank" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 0.8rem; border-radius: var(--border-radius-sm); border: 1px solid var(--primary); color: var(--primary); background: transparent;">
+              <i class="fas fa-route"></i> Rute
+            </a>
+            ` : ''}
+          </div>
         </div>
       </div>
     `;
