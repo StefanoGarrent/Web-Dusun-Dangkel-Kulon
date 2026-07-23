@@ -179,3 +179,51 @@ CREATE POLICY "Only approved admins can delete UMKM" ON public.umkm
    `https://<project-id>.supabase.co/auth/v1/callback`
 6. Salin **Client ID** dan **Client Secret** yang diberikan oleh Google Cloud.
 7. Di dashboard Supabase, masuk ke **Authentication > Providers > Google**, masukkan **Client ID** dan **Client Secret** tersebut, lalu aktifkan provider Google.
+
+---
+
+## Langkah 4: Konfigurasi Supabase Storage untuk Upload Foto
+Agar fitur unggah foto berita dan UMKM berjalan, Anda harus membuat bucket penyimpanan baru dan mengkonfigurasi hak aksesnya:
+
+1. Di dashboard Supabase Anda, masuk ke menu **Storage**.
+2. Klik **New Bucket** (Buat Bucket Baru) dan beri nama: `dusun-images`.
+3. Aktifkan opsi **Public bucket** (agar gambar dapat diakses secara publik oleh semua pengunjung web melalui tautan URL).
+4. Klik **Save**.
+5. Buka menu **SQL Editor** di Supabase, buat query baru, lalu salin dan jalankan script SQL berikut untuk mengatur keamanan bucket (RLS Policies):
+
+```sql
+-- 1. Kebijakan agar siapa saja dapat melihat/membaca foto (Public Read)
+CREATE POLICY "Public Read Access" ON storage.objects
+  FOR SELECT USING (bucket_id = 'dusun-images');
+
+-- 2. Kebijakan agar hanya admin yang disetujui (Approved Admin) yang bisa mengunggah foto
+CREATE POLICY "Admin Upload Access" ON storage.objects
+  FOR INSERT WITH CHECK (
+    bucket_id = 'dusun-images' AND
+    (EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.status = 'approved'
+    ))
+  );
+
+-- 3. Kebijakan agar hanya admin yang disetujui yang bisa memperbarui foto
+CREATE POLICY "Admin Update Access" ON storage.objects
+  FOR UPDATE USING (
+    bucket_id = 'dusun-images' AND
+    (EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.status = 'approved'
+    ))
+  );
+
+-- 4. Kebijakan agar hanya admin yang disetujui yang bisa menghapus foto
+CREATE POLICY "Admin Delete Access" ON storage.objects
+  FOR DELETE USING (
+    bucket_id = 'dusun-images' AND
+    (EXISTS (
+      SELECT 1 FROM public.profiles
+      WHERE profiles.id = auth.uid() AND profiles.status = 'approved'
+    ))
+  );
+```
+

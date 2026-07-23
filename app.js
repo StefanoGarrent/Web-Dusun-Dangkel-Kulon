@@ -939,8 +939,13 @@ function renderDashboardUI() {
               <input type="text" id="news-title-field" class="form-control" required placeholder="Contoh: Kerja Bakti Pembersihan Saluran Air Wetan Dusun">
             </div>
             <div class="form-group">
-              <label for="news-image-field">URL Gambar Berita (Optional)</label>
-              <input type="url" id="news-image-field" class="form-control" placeholder="https://domain.com/gambar.jpg">
+              <label for="news-image-file">Foto Berita (Optional)</label>
+              <input type="file" id="news-image-file" class="form-control" accept="image/*" onchange="previewImage(this, 'news-preview')">
+              <small class="text-muted" style="display:block; margin-top:5px; font-size:0.8rem;">Ukuran file maks. 5MB. Format: JPG, PNG, WEBP. Foto otomatis dikonversi ke WebP (.webp).</small>
+              <div id="news-preview" class="image-preview-container" style="display: none;">
+                <img src="" alt="Preview">
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeSelectedImage('news-image-file', 'news-preview')"><i class="fas fa-trash"></i> Hapus Foto</button>
+              </div>
             </div>
             <div class="form-group">
               <label for="news-content-field">Konten/Isi Berita</label>
@@ -997,8 +1002,13 @@ function renderDashboardUI() {
               <input type="text" id="umkm-address-field" class="form-control" required placeholder="Dangkel Kulon RT 02 / RW 04">
             </div>
             <div class="form-group">
-              <label for="umkm-image-field">URL Foto Produk / Toko (Optional)</label>
-              <input type="url" id="umkm-image-field" class="form-control" placeholder="https://domain.com/foto-produk.jpg">
+              <label for="umkm-image-file">Foto Produk / Toko (Optional)</label>
+              <input type="file" id="umkm-image-file" class="form-control" accept="image/*" onchange="previewImage(this, 'umkm-preview')">
+              <small class="text-muted" style="display:block; margin-top:5px; font-size:0.8rem;">Ukuran file maks. 5MB. Format: JPG, PNG, WEBP. Foto otomatis dikonversi ke WebP (.webp).</small>
+              <div id="umkm-preview" class="image-preview-container" style="display: none;">
+                <img src="" alt="Preview">
+                <button type="button" class="btn btn-sm btn-danger" onclick="removeSelectedImage('umkm-image-file', 'umkm-preview')"><i class="fas fa-trash"></i> Hapus Foto</button>
+              </div>
             </div>
             <div class="form-group">
               <label for="umkm-desc-field">Deskripsi Singkat Usaha</label>
@@ -1317,6 +1327,13 @@ async function deleteUser(userId) {
 function openNewsFormModal() {
   document.getElementById('news-form').reset();
   document.getElementById('news-id-field').value = '';
+  
+  const preview = document.getElementById('news-preview');
+  preview.style.display = 'none';
+  preview.querySelector('img').src = '';
+  preview.dataset.existingUrl = '';
+  preview.dataset.originalUrl = '';
+
   document.getElementById('news-modal-title').innerText = 'Tambah Berita Baru';
   document.getElementById('news-form-modal').classList.add('active');
 }
@@ -1329,18 +1346,60 @@ async function saveNews(e) {
   e.preventDefault();
   const id = document.getElementById('news-id-field').value;
   const title = document.getElementById('news-title-field').value;
-  const imageUrl = document.getElementById('news-image-field').value;
   const content = document.getElementById('news-content-field').value;
+  const fileInput = document.getElementById('news-image-file');
+  const preview = document.getElementById('news-preview');
 
-  const payload = {
-    title,
-    content,
-    image_url: imageUrl || null,
-    author_id: currentUser.id,
-    updated_at: new Date().toISOString()
-  };
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn.innerHTML;
+
+  let imageUrl = preview.dataset.existingUrl || null;
+  const originalUrl = preview.dataset.originalUrl || null;
 
   try {
+    if (fileInput.files && fileInput.files[0]) {
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengompres & Mengunggah...';
+      submitBtn.disabled = true;
+
+      const file = fileInput.files[0];
+      const webpBlob = await convertToWebP(file, 1200, 0.85);
+
+      const fileName = `news-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.webp`;
+      const filePath = `news/${fileName}`;
+
+      const { data, error } = await sb.storage
+        .from('dusun-images')
+        .upload(filePath, webpBlob, {
+          contentType: 'image/webp',
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = sb.storage
+        .from('dusun-images')
+        .getPublicUrl(filePath);
+
+      imageUrl = publicUrl;
+    }
+
+    // Hapus foto lama jika URL berubah (berubah berkas atau dihapus total)
+    if (originalUrl && imageUrl !== originalUrl) {
+      const oldPath = getStoragePathFromUrl(originalUrl);
+      if (oldPath) {
+        await sb.storage.from('dusun-images').remove([oldPath]);
+      }
+    }
+
+    const payload = {
+      title,
+      content,
+      image_url: imageUrl,
+      author_id: currentUser.id,
+      updated_at: new Date().toISOString()
+    };
+
     let result;
     if (id) {
       // Update
@@ -1364,14 +1423,33 @@ async function saveNews(e) {
     loadDashboardStats();
   } catch (err) {
     showToast('Gagal menyimpan berita: ' + err.message, 'error');
+  } finally {
+    submitBtn.innerHTML = originalBtnText;
+    submitBtn.disabled = false;
   }
 }
 
 function editNews(news) {
   document.getElementById('news-id-field').value = news.id;
   document.getElementById('news-title-field').value = news.title;
-  document.getElementById('news-image-field').value = news.image_url || '';
   document.getElementById('news-content-field').value = news.content;
+
+  const fileInput = document.getElementById('news-image-file');
+  fileInput.value = '';
+
+  const preview = document.getElementById('news-preview');
+  const previewImg = preview.querySelector('img');
+  if (news.image_url) {
+    previewImg.src = news.image_url;
+    preview.style.display = 'flex';
+    preview.dataset.existingUrl = news.image_url;
+    preview.dataset.originalUrl = news.image_url;
+  } else {
+    previewImg.src = '';
+    preview.style.display = 'none';
+    preview.dataset.existingUrl = '';
+    preview.dataset.originalUrl = '';
+  }
 
   document.getElementById('news-modal-title').innerText = 'Edit Berita';
   document.getElementById('news-form-modal').classList.add('active');
@@ -1381,12 +1459,26 @@ async function deleteNews(id) {
   if (!confirm('Apakah Anda yakin ingin menghapus berita ini secara permanen?')) return;
 
   try {
+    // Dapatkan info image_url sebelum menghapus data
+    const { data: newsData } = await sb
+      .from('news')
+      .select('image_url')
+      .eq('id', id)
+      .single();
+
     const { error } = await sb
       .from('news')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
+
+    if (newsData && newsData.image_url) {
+      const oldPath = getStoragePathFromUrl(newsData.image_url);
+      if (oldPath) {
+        await sb.storage.from('dusun-images').remove([oldPath]);
+      }
+    }
 
     showToast('Berita berhasil dihapus.', 'success');
     loadDashboardNews();
@@ -1396,6 +1488,7 @@ async function deleteNews(id) {
   }
 }
 
+
 // SAVE & ACTION UMKM
 function openUmkmFormModal() {
   document.getElementById('umkm-form').reset();
@@ -1403,6 +1496,21 @@ function openUmkmFormModal() {
   document.getElementById('umkm-lat-field').value = '';
   document.getElementById('umkm-lng-field').value = '';
   pickerMarker = null;
+}
+
+// SAVE & ACTION UMKM
+function openUmkmFormModal() {
+  document.getElementById('umkm-form').reset();
+  document.getElementById('umkm-id-field').value = '';
+  document.getElementById('umkm-lat-field').value = '';
+  document.getElementById('umkm-lng-field').value = '';
+  pickerMarker = null;
+
+  const preview = document.getElementById('umkm-preview');
+  preview.style.display = 'none';
+  preview.querySelector('img').src = '';
+  preview.dataset.existingUrl = '';
+  preview.dataset.originalUrl = '';
 
   document.getElementById('umkm-modal-title').innerText = 'Tambah Data UMKM';
   document.getElementById('umkm-form-modal').classList.add('active');
@@ -1421,24 +1529,66 @@ async function saveUmkm(e) {
   const category = document.getElementById('umkm-category-field').value;
   const whatsappNumber = document.getElementById('umkm-whatsapp-field').value;
   const address = document.getElementById('umkm-address-field').value;
-  const imageUrl = document.getElementById('umkm-image-field').value;
   const description = document.getElementById('umkm-desc-field').value;
   const latitude = document.getElementById('umkm-lat-field').value;
   const longitude = document.getElementById('umkm-lng-field').value;
+  const fileInput = document.getElementById('umkm-image-file');
+  const preview = document.getElementById('umkm-preview');
 
-  const payload = {
-    name,
-    owner,
-    category,
-    whatsapp_number: whatsappNumber,
-    address,
-    image_url: imageUrl || null,
-    description,
-    latitude: latitude ? parseFloat(latitude) : null,
-    longitude: longitude ? parseFloat(longitude) : null
-  };
+  const submitBtn = e.target.querySelector('button[type="submit"]');
+  const originalBtnText = submitBtn.innerHTML;
+
+  let imageUrl = preview.dataset.existingUrl || null;
+  const originalUrl = preview.dataset.originalUrl || null;
 
   try {
+    if (fileInput.files && fileInput.files[0]) {
+      submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengompres & Mengunggah...';
+      submitBtn.disabled = true;
+
+      const file = fileInput.files[0];
+      const webpBlob = await convertToWebP(file, 1200, 0.85);
+
+      const fileName = `umkm-${Date.now()}-${Math.random().toString(36).substring(2, 9)}.webp`;
+      const filePath = `umkm/${fileName}`;
+
+      const { data, error } = await sb.storage
+        .from('dusun-images')
+        .upload(filePath, webpBlob, {
+          contentType: 'image/webp',
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (error) throw error;
+
+      const { data: { publicUrl } } = sb.storage
+        .from('dusun-images')
+        .getPublicUrl(filePath);
+
+      imageUrl = publicUrl;
+    }
+
+    // Hapus foto lama jika URL berubah (berubah berkas atau dihapus total)
+    if (originalUrl && imageUrl !== originalUrl) {
+      const oldPath = getStoragePathFromUrl(originalUrl);
+      if (oldPath) {
+        await sb.storage.from('dusun-images').remove([oldPath]);
+      }
+    }
+
+    const payload = {
+      name,
+      owner,
+      category,
+      whatsapp_number: whatsappNumber,
+      address,
+      image_url: imageUrl,
+      description,
+      latitude: latitude ? parseFloat(latitude) : null,
+      longitude: longitude ? parseFloat(longitude) : null
+    };
+
     let result;
     if (id) {
       // Update
@@ -1461,6 +1611,9 @@ async function saveUmkm(e) {
     loadDashboardStats();
   } catch (err) {
     showToast('Gagal menyimpan UMKM: ' + err.message, 'error');
+  } finally {
+    submitBtn.innerHTML = originalBtnText;
+    submitBtn.disabled = false;
   }
 }
 
@@ -1471,10 +1624,26 @@ function editUmkm(umkm) {
   document.getElementById('umkm-category-field').value = umkm.category;
   document.getElementById('umkm-whatsapp-field').value = umkm.whatsapp_number;
   document.getElementById('umkm-address-field').value = umkm.address;
-  document.getElementById('umkm-image-field').value = umkm.image_url || '';
   document.getElementById('umkm-desc-field').value = umkm.description || '';
   document.getElementById('umkm-lat-field').value = umkm.latitude || '';
   document.getElementById('umkm-lng-field').value = umkm.longitude || '';
+
+  const fileInput = document.getElementById('umkm-image-file');
+  fileInput.value = '';
+
+  const preview = document.getElementById('umkm-preview');
+  const previewImg = preview.querySelector('img');
+  if (umkm.image_url) {
+    previewImg.src = umkm.image_url;
+    preview.style.display = 'flex';
+    preview.dataset.existingUrl = umkm.image_url;
+    preview.dataset.originalUrl = umkm.image_url;
+  } else {
+    previewImg.src = '';
+    preview.style.display = 'none';
+    preview.dataset.existingUrl = '';
+    preview.dataset.originalUrl = '';
+  }
 
   document.getElementById('umkm-modal-title').innerText = 'Edit Data UMKM';
   document.getElementById('umkm-form-modal').classList.add('active');
@@ -1485,12 +1654,26 @@ async function deleteUmkm(id) {
   if (!confirm('Apakah Anda yakin ingin menghapus UMKM ini dari direktori?')) return;
 
   try {
+    // Dapatkan info image_url sebelum menghapus data
+    const { data: umkmData } = await sb
+      .from('umkm')
+      .select('image_url')
+      .eq('id', id)
+      .single();
+
     const { error } = await sb
       .from('umkm')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
+
+    if (umkmData && umkmData.image_url) {
+      const oldPath = getStoragePathFromUrl(umkmData.image_url);
+      if (oldPath) {
+        await sb.storage.from('dusun-images').remove([oldPath]);
+      }
+    }
 
     showToast('Data UMKM berhasil dihapus.', 'success');
     loadDashboardUMKM();
@@ -1579,6 +1762,94 @@ function formatPhoneNumber(num) {
     formatted = '62' + formatted.slice(1);
   }
   return formatted;
+}
+
+// ==========================================
+// UTILITY FUNCTIONS UNTUK UPLOAD & KOMPRESI GAMBAR (WEBP)
+// ==========================================
+
+function previewImage(input, previewContainerId) {
+  const container = document.getElementById(previewContainerId);
+  const img = container.querySelector('img');
+  
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    
+    // Batasan ukuran 5MB
+    const maxSizeBytes = 5 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      showToast('Ukuran file terlalu besar! Maksimal adalah 5MB.', 'error');
+      input.value = '';
+      container.style.display = 'none';
+      img.src = '';
+      return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      img.src = e.target.result;
+      container.style.display = 'flex';
+    }
+    reader.readAsDataURL(file);
+  }
+}
+
+function removeSelectedImage(inputId, previewContainerId) {
+  const input = document.getElementById(inputId);
+  const container = document.getElementById(previewContainerId);
+  const img = container.querySelector('img');
+  
+  input.value = '';
+  img.src = '';
+  container.style.display = 'none';
+  container.dataset.existingUrl = ''; // Hapus referensi foto lama
+}
+
+function convertToWebP(file, maxWidth = 1200, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Gagal mengompres gambar ke format WebP.'));
+          }
+        }, 'image/webp', quality);
+      };
+      img.onerror = (err) => reject(err);
+    };
+    reader.onerror = (err) => reject(err);
+  });
+}
+
+function getStoragePathFromUrl(url) {
+  if (!url) return null;
+  const marker = '/storage/v1/object/public/dusun-images/';
+  const index = url.indexOf(marker);
+  if (index !== -1) {
+    return url.substring(index + marker.length);
+  }
+  return null;
 }
 
 // ==========================================
@@ -1674,6 +1945,4 @@ function loadMockUMKM() {
   window.allUmkmList = mockUmkm;
   renderUMKM(mockUmkm);
   addUMKMMarkers(mockUmkm);
-}
-
-// Akhir dari file app.js
+} 
