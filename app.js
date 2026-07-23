@@ -925,7 +925,7 @@ function renderDashboardUI() {
 
         <!-- PANEL 2: KELOLA BERITA -->
         <section id="panel-berita" class="dashboard-panel">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <div class="dash-panel-header">
             <h3>Daftar Berita Kegiatan Pemuda</h3>
             <button class="btn btn-primary" onclick="openNewsFormModal()"><i class="fas fa-plus"></i> Tambah Berita</button>
           </div>
@@ -948,7 +948,7 @@ function renderDashboardUI() {
 
         <!-- PANEL 3: KELOLA UMKM -->
         <section id="panel-umkm" class="dashboard-panel">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <div class="dash-panel-header">
             <h3>Daftar UMKM Sekitar Dusun</h3>
             <button class="btn btn-primary" onclick="openUmkmFormModal()"><i class="fas fa-plus"></i> Tambah UMKM</button>
           </div>
@@ -976,7 +976,7 @@ function renderDashboardUI() {
           <h3>Pengaturan Koordinat Wilayah Dusun</h3>
           <p class="text-muted" style="margin-bottom:20px;">Atur titik koordinat pusat wilayah dusun (center) dan tingkat zoom default untuk peta di halaman utama.</p>
           
-          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+          <div class="peta-settings-grid">
             <!-- Form Pengaturan -->
             <div class="dash-card" style="margin:0; padding:20px;">
               <form id="map-settings-form" onsubmit="saveMapSettings(event)">
