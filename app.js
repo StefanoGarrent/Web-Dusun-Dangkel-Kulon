@@ -44,6 +44,29 @@ async function loadMapSettings() {
   }
 }
 
+async function loadContactSettings() {
+  try {
+    const { data, error } = await sb
+      .from('dusun_settings')
+      .select('value')
+      .eq('id', 'contact_config')
+      .single();
+
+    if (error) throw error;
+    if (data && data.value) {
+      const addressEl = document.getElementById('footer-address');
+      const emailEl = document.getElementById('footer-email');
+      const phoneEl = document.getElementById('footer-phone');
+
+      if (addressEl) addressEl.textContent = data.value.address || '';
+      if (emailEl) emailEl.textContent = data.value.email || '';
+      if (phoneEl) phoneEl.textContent = data.value.phone || '';
+    }
+  } catch (err) {
+    console.warn('Gagal memuat pengaturan kontak dari database, menggunakan fallback lokal:', err.message);
+  }
+}
+
 // 3. DOCUMENT READY HANDLER
 document.addEventListener('DOMContentLoaded', async () => {
   // Mobile Nav Burger Menu
@@ -333,6 +356,7 @@ function initPublicPage() {
   if (sb) {
     loadPublicNews();
     loadPublicUMKM();
+    loadContactSettings();
   } else {
     loadMockNews();
     loadMockUMKM();
@@ -861,6 +885,11 @@ function renderDashboardUI() {
               <i class="fas fa-map-marked-alt"></i> <span>Pengaturan Peta</span>
             </a>
           </li>
+          <li class="sidebar-menu-item" id="menu-kontak">
+            <a href="#" class="sidebar-menu-link" onclick="switchPanel('kontak'); return false;">
+              <i class="fas fa-phone-alt"></i> <span>Kontak Pelayanan</span>
+            </a>
+          </li>
           ${isSuperAdmin ? `
           <li class="sidebar-menu-item" id="menu-persetujuan">
             <a href="#" class="sidebar-menu-link" onclick="switchPanel('persetujuan'); return false;">
@@ -1017,6 +1046,32 @@ function renderDashboardUI() {
               </div>
               <div id="setting-map-picker" style="height: 250px; width: 100%; border-radius:8px; border:1px solid var(--gray-300); margin-top:10px;"></div>
             </div>
+          </div>
+        </section>
+
+        <!-- PANEL 7: KONTAK PELAYANAN FOOTER -->
+        <section id="panel-kontak" class="dashboard-panel">
+          <h3>Pengaturan Kontak Pelayanan & Footer</h3>
+          <p class="text-muted" style="margin-bottom:20px;">Ubah data informasi kontak pelayanan dusun yang ditampilkan pada bagian bawah (footer) website.</p>
+          
+          <div class="dash-card" style="max-width: 600px; margin: 0; padding: 25px;">
+            <form id="contact-settings-form" onsubmit="saveContactSettings(event)">
+              <div class="form-group">
+                <label for="setting-contact-address">Alamat Dusun</label>
+                <textarea id="setting-contact-address" class="form-control" required rows="3" placeholder="Contoh: Dusun Dangkel Kulon, Desa Karangtalun, Kec. Ngluwar..."></textarea>
+              </div>
+              <div class="form-group">
+                <label for="setting-contact-email">Email Pelayanan</label>
+                <input type="email" id="setting-contact-email" class="form-control" required placeholder="Contoh: info@dangkelkulon.desa.id">
+              </div>
+              <div class="form-group">
+                <label for="setting-contact-phone">Nomor Telepon / WhatsApp</label>
+                <input type="text" id="setting-contact-phone" class="form-control" required placeholder="Contoh: +62 812-3456-7890">
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 15px;">
+                <i class="fas fa-save"></i> Simpan Informasi Kontak
+              </button>
+            </form>
           </div>
         </section>
 
@@ -1223,6 +1278,11 @@ function switchPanel(panelId) {
   // Jika masuk ke panel daftar pengguna
   if (panelId === 'pengguna') {
     loadAllUsers();
+  }
+
+  // Jika masuk ke panel kontak pelayanan
+  if (panelId === 'kontak') {
+    initContactSettings();
   }
 
   // Tutup sidebar di mobile setelah memilih menu
@@ -2600,5 +2660,67 @@ async function transferTitle(targetUserId, targetUserName) {
     switchPanel('pengguna');
   } catch (err) {
     showToast('Gagal mentransfer jabatan: ' + err.message, 'error');
+  }
+}
+
+// ==========================================
+// PENGELOLAAN KONTAK PELAYANAN & FOOTER
+// ==========================================
+
+async function initContactSettings() {
+  const addressInput = document.getElementById('setting-contact-address');
+  const emailInput = document.getElementById('setting-contact-email');
+  const phoneInput = document.getElementById('setting-contact-phone');
+
+  if (!addressInput || !emailInput || !phoneInput) return;
+
+  try {
+    const { data, error } = await sb
+      .from('dusun_settings')
+      .select('value')
+      .eq('id', 'contact_config')
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // Ignore PostgREST single row not found error
+
+    if (data && data.value) {
+      addressInput.value = data.value.address || '';
+      emailInput.value = data.value.email || '';
+      phoneInput.value = data.value.phone || '';
+    } else {
+      // Fallback ke default lama jika data awal kosong
+      addressInput.value = 'Dusun Dangkel Kulon, Desa Karangtalun, Kec. Ngluwar, Kabupaten Magelang, Jawa Tengah 56485';
+      emailInput.value = 'info@dangkelkulon.desa.id';
+      phoneInput.value = '+62 812-3456-7890';
+    }
+  } catch (err) {
+    showToast('Gagal memuat pengaturan kontak: ' + err.message, 'error');
+  }
+}
+
+async function saveContactSettings(event) {
+  event.preventDefault();
+  
+  const addressValue = document.getElementById('setting-contact-address').value.trim();
+  const emailValue = document.getElementById('setting-contact-email').value.trim();
+  const phoneValue = document.getElementById('setting-contact-phone').value.trim();
+
+  try {
+    const { error } = await sb
+      .from('dusun_settings')
+      .upsert({
+        id: 'contact_config',
+        value: {
+          address: addressValue,
+          email: emailValue,
+          phone: phoneValue
+        },
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) throw error;
+    showToast('Informasi kontak pelayanan berhasil disimpan!', 'success');
+  } catch (err) {
+    showToast('Gagal menyimpan kontak: ' + err.message, 'error');
   }
 } 

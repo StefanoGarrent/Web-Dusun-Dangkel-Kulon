@@ -268,9 +268,13 @@ CREATE POLICY "Only approved admins can modify settings" ON public.dusun_setting
     )
   );
 
--- 5. Masukkan data awal koordinat (fallback awal)
+-- 5. Masukkan data awal koordinat dan kontak (fallback awal)
 INSERT INTO public.dusun_settings (id, value)
 VALUES ('map_config', '{"latitude": -7.3683, "longitude": 110.3340, "zoom": 15}')
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.dusun_settings (id, value)
+VALUES ('contact_config', '{"address": "Dusun Dangkel Kulon, Desa Karangtalun, Kec. Ngluwar, Kabupaten Magelang, Jawa Tengah 56485", "email": "info@dangkelkulon.desa.id", "phone": "+62 812-3456-7890"}')
 ON CONFLICT (id) DO NOTHING;
 
 ---
