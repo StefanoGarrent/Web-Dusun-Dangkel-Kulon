@@ -2221,15 +2221,20 @@ async function loadAllUsers() {
   tbody.innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> Memuat data pengguna...</td></tr>';
 
   try {
-    const { data: users, error } = await sb
+    const { data: rawUsers, error } = await sb
       .from('profiles')
-      .select(`
-        *,
-        requester:downgrade_request_by(full_name, email)
-      `)
-      .order('role', { ascending: false });
+      .select('*');
 
     if (error) throw error;
+
+    // Urutkan kustom: Developer (3), Super Admin (2), Admin (1)
+    const users = rawUsers || [];
+    users.sort((a, b) => {
+      const roleOrder = { 'developer': 3, 'super_admin': 2, 'admin': 1 };
+      const orderA = roleOrder[a.role] || 0;
+      const orderB = roleOrder[b.role] || 0;
+      return orderB - orderA;
+    });
 
     tbody.innerHTML = '';
     if (users.length === 0) {
@@ -2244,6 +2249,15 @@ async function loadAllUsers() {
     users.forEach(user => {
       const tr = document.createElement('tr');
       const isSelf = user.id === currentUserId;
+
+      // Cari pengaju downgrade di memori
+      let requesterName = 'Super Admin';
+      if (user.downgrade_request_by) {
+        const reqUser = users.find(u => u.id === user.downgrade_request_by);
+        if (reqUser) {
+          requesterName = reqUser.full_name || reqUser.email;
+        }
+      }
 
       // 1. Role Display
       let roleBadge = '';
@@ -2273,11 +2287,14 @@ async function loadAllUsers() {
           <div style="display:flex; flex-direction:column; gap:6px;">
             <div style="display:flex; gap:4px; align-items:center;">
               <span style="font-size:0.75rem; color:var(--gray-600); min-width:60px;">Role:</span>
-              <select class="form-control-sm" onchange="updateUserRole('${user.id}', this.value)" ${isSelf ? 'disabled' : ''}>
-                <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                <option value="super_admin" ${user.role === 'super_admin' ? 'selected' : ''}>Super Admin</option>
-                <option value="developer" ${user.role === 'developer' ? 'selected' : ''}>Developer</option>
-              </select>
+              ${isSelf ? `
+                <span class="badge" style="background-color:#1e293b; color:#ffffff; font-size:0.75rem;">Developer</span>
+              ` : `
+                <select class="form-control-sm" onchange="updateUserRole('${user.id}', this.value)">
+                  <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                  <option value="super_admin" ${user.role === 'super_admin' ? 'selected' : ''}>Super Admin</option>
+                </select>
+              `}
             </div>
             <div style="display:flex; gap:4px; align-items:center;">
               <span style="font-size:0.75rem; color:var(--gray-600); min-width:60px;">Jabatan:</span>
@@ -2296,10 +2313,10 @@ async function loadAllUsers() {
                 <option value="rejected" ${user.status === 'rejected' ? 'selected' : ''}>Rejected</option>
               </select>
             </div>
-            <div style="display:flex; gap:6px; margin-top:4px;">
-              ${!isSelf ? `<button class="btn-action btn-delete" style="padding:4px 8px; font-size:0.75rem;" onclick="deleteUserFromList('${user.id}')"><i class="fas fa-trash-alt"></i> Hapus</button>` : ''}
+            <div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">
+              ${!isSelf ? `<button class="btn-action btn-delete" style="padding:4px 8px; font-size:0.75rem; width:100%;" onclick="deleteUserFromList('${user.id}')"><i class="fas fa-trash-alt"></i> Hapus</button>` : ''}
               ${user.downgrade_request_by ? `
-                <button class="btn-action" style="padding:4px 8px; font-size:0.75rem; background-color:#ffccd5; color:#a1001a;" onclick="executeDowngradeRequest('${user.id}')"><i class="fas fa-user-minus"></i> Proses Downgrade</button>
+                <button class="btn-action" style="padding:6px 8px; font-size:0.75rem; background-color:#ffccd5; color:#a1001a; width:100%; border:1px solid #f5b0bb;" onclick="executeDowngradeRequest('${user.id}')" title="Diminta oleh ${escapeHTML(requesterName)}"><i class="fas fa-user-minus"></i> Demosi (Diminta: ${escapeHTML(requesterName)})</button>
               ` : ''}
             </div>
           </div>
@@ -2314,7 +2331,6 @@ async function loadAllUsers() {
           } else {
             // Request downgrade for other super_admin
             if (user.downgrade_request_by) {
-              const requesterName = user.requester ? user.requester.full_name : 'Super Admin';
               actionHTML = `<span class="text-muted" style="font-size:0.75rem;"><i class="fas fa-clock text-warning"></i> Downgrade diajukan oleh ${escapeHTML(requesterName)}</span>`;
             } else {
               actionHTML = `<button class="btn-action" style="background-color:#ffeeba; color:#856404; font-size:0.75rem; padding:5px 10px;" onclick="requestDowngradeUser('${user.id}')"><i class="fas fa-user-minus"></i> Ajukan Downgrade</button>`;
@@ -2354,12 +2370,8 @@ async function loadAllUsers() {
         }
       }
 
-      // Add downgrade request details below title if present
+      // Add downgrade request details below title if present (removed duplicate badge warning for cleaner layout)
       let finalTitleDisplay = displayTitle;
-      if (user.downgrade_request_by && user.role === 'super_admin') {
-        const reqName = user.requester ? user.requester.full_name : 'Super Admin';
-        finalTitleDisplay += `<br><span class="badge badge-warning" style="font-size:0.7rem; margin-top:4px; display:inline-block; line-height:1.2;">Diminta Downgrade oleh ${escapeHTML(reqName)}</span>`;
-      }
 
       tr.innerHTML = `
         <td>
@@ -2399,16 +2411,49 @@ async function updateUserRole(userId, newRole) {
 
 async function updateUserTitle(userId, newTitle) {
   try {
+    // Jika jabatan yang dipilih adalah Kepala Dusun atau Ketua Pemuda (jabatan tunggal/unik)
+    if (newTitle === 'Kepala Dusun' || newTitle === 'Ketua Pemuda') {
+      const { data: currentHolders, error: fetchError } = await sb
+        .from('profiles')
+        .select('id, full_name')
+        .eq('title', newTitle);
+
+      if (fetchError) throw fetchError;
+
+      if (currentHolders && currentHolders.length > 0) {
+        const holder = currentHolders[0];
+        
+        // Hanya cabut jika pemegang saat ini bukan user target itu sendiri
+        if (holder.id !== userId) {
+          const confirmSwap = confirm(`Jabatan "${newTitle}" saat ini sedang dipegang oleh "${holder.full_name}". Apakah Anda yakin ingin memindahkan jabatan ini ke target? Jabatan pada "${holder.full_name}" akan otomatis dicabut.`);
+          if (!confirmSwap) {
+            loadAllUsers(); // Reset state dropdown
+            return;
+          }
+
+          // Cabut jabatan dari pemegang sebelumnya
+          const { error: revokeError } = await sb
+            .from('profiles')
+            .update({ title: null, updated_at: new Date().toISOString() })
+            .eq('id', holder.id);
+
+          if (revokeError) throw revokeError;
+        }
+      }
+    }
+
+    // Berikan jabatan baru ke target
     const { error } = await sb
       .from('profiles')
       .update({ title: newTitle || null, updated_at: new Date().toISOString() })
       .eq('id', userId);
 
     if (error) throw error;
-    showToast('Jabatan pengguna berhasil diubah.', 'success');
+    showToast('Jabatan pengguna berhasil diperbarui.', 'success');
     loadAllUsers();
   } catch (err) {
-    showToast('Gagal mengubah jabatan: ' + err.message, 'error');
+    showToast('Gagal memperbarui jabatan: ' + err.message, 'error');
+    loadAllUsers(); // Reset state dropdown
   }
 }
 
@@ -2448,8 +2493,32 @@ async function deleteUserFromList(userId) {
 }
 
 async function promoteUserFromList(userId) {
-  if (!confirm('Apakah Anda yakin ingin mempromosikan pengguna ini menjadi Super Admin?')) return;
+  if (!confirm('Apakah Anda yakin ingin mempromosikan pengguna ini menjadi Super Admin (Kepala Dusun)?')) return;
   try {
+    // Cari pemegang jabatan 'Kepala Dusun' saat ini
+    const { data: currentHolders, error: fetchError } = await sb
+      .from('profiles')
+      .select('id, full_name')
+      .eq('title', 'Kepala Dusun');
+
+    if (fetchError) throw fetchError;
+
+    if (currentHolders && currentHolders.length > 0) {
+      const holder = currentHolders[0];
+      if (holder.id !== userId) {
+        const confirmSwap = confirm(`Jabatan "Kepala Dusun" saat ini dipegang oleh "${holder.full_name}". Apakah Anda yakin ingin memindahkannya? Jabatan Kepala Dusun pada "${holder.full_name}" akan otomatis dicabut.`);
+        if (!confirmSwap) return;
+
+        // Cabut jabatan dari pemegang sebelumnya
+        const { error: revokeError } = await sb
+          .from('profiles')
+          .update({ title: null, updated_at: new Date().toISOString() })
+          .eq('id', holder.id);
+
+        if (revokeError) throw revokeError;
+      }
+    }
+
     const { error } = await sb
       .from('profiles')
       .update({ role: 'super_admin', title: 'Kepala Dusun', updated_at: new Date().toISOString() })
